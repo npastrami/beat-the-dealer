@@ -8,7 +8,6 @@ type HandProps = {
 };
 
 const Hand: React.FC<HandProps> = ({ title, cards }) => {
-  console.log(cards)
   const getTitle = () => {
     if (cards.length > 0) {
       return (

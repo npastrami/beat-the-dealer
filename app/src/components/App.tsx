@@ -15,7 +15,7 @@ const App: React.FC = () => {
     bet = 'Place a Bet!',
     hitStand = 'Hit or Stand?',
     bust = 'Bust!',
-    userWin = 'You Win!',
+    userWin = 'Player1 Win!',
     dealerWin = 'Dealer Wins!',
     tie = 'Tie!'
   }
@@ -71,9 +71,12 @@ const App: React.FC = () => {
         const data = await response.json();
         const playersData = data?.gameState?.players;
         const dealerData = data?.gameState?.dealer;
+
+        console.log(data);
   
         if (playersData && playersData.length > 0 && playersData[0].hands && playersData[0].hands[0].cards) {
           setUserCards(playersData[0].hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
+          setUserScore(playersData[0].hands[0].hand_value);
         } else {
           console.error("Unexpected gameState structure for players", playersData);
           return;
@@ -81,6 +84,7 @@ const App: React.FC = () => {
   
         if (dealerData && dealerData.hand) {
           setDealerCards(dealerData.hand.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
+          setDealerScore(dealerData.hand_value);
         } else {
           console.error("Unexpected gameState structure for dealer", dealerData);
           return;
@@ -134,10 +138,25 @@ const App: React.FC = () => {
           player_name: "Player 1",
         }),
       });
-
+  
       const data = await response.json();
-      // Update your state variables here based on `data`
-      // setUserCards, setDealerCards, etc.
+      if (data.roundResults) {
+        // Assuming roundResults has the structure: { winner: "Player" or "Dealer", playerScore: number, dealerScore: number }
+        const result = data.roundResults[0]; // If there are multiple players, this will need adjustment
+        setUserScore(result.player_hand_value);
+        setDealerScore(result.dealer_hand_value);
+        setMessage(result.result === "win" ? Message.userWin : result.result === "lose" ? Message.dealerWin : Message.tie);
+        setButtonState({
+          ...buttonState,
+          hitDisabled: true,
+          standDisabled: true,
+          resetDisabled: false
+        });
+        setGameState(GameState.dealerTurn); // or a new state that represents the end of a round
+      } else {
+        // Update your state variables here based on the current game state
+        // setUserCards, setDealerCards, etc.
+      }
     } catch (error) {
       console.error("Error standing:", error);
     }

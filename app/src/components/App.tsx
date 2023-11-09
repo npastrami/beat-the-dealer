@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const [dealerCards, setDealerCards]: any[] = useState([]);
   const [dealerScore, setDealerScore] = useState(0);
 
-  const [balance, setBalance] = useState(100);
+  const [balance, setBalance] = useState(1000);
   const [bet, setBet] = useState(0);
 
   const [gameState, setGameState] = useState(GameState.bet);
@@ -64,6 +64,7 @@ const App: React.FC = () => {
         body: JSON.stringify({
           numDecks: 1,
           numPlayers: 1,
+          betAmount: amount,
         }),
       });
   
@@ -77,6 +78,7 @@ const App: React.FC = () => {
         if (playersData && playersData.length > 0 && playersData[0].hands && playersData[0].hands[0].cards) {
           setUserCards(playersData[0].hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
           setUserScore(playersData[0].hands[0].hand_value);
+          setBalance(playersData[0].chips);
         } else {
           console.error("Unexpected gameState structure for players", playersData);
           return;
@@ -94,7 +96,6 @@ const App: React.FC = () => {
         console.log("Set dealerCards to:", dealerData.hand);  // Log the set value of dealerCards
   
         setBet(amount);
-        setBalance(balance - amount);
         setGameState(GameState.init);
       } else {
         console.error("Failed to start game");
@@ -122,6 +123,7 @@ const App: React.FC = () => {
       setUserCards(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserScore(playerHand.hands[0].hand_value)
       setDealerScore(playerHand.hands[0].hand_value)
+      setBalance(playerHand.balance);
     } catch (error) {
       console.error("Error hitting:", error);
     }
@@ -153,6 +155,7 @@ const App: React.FC = () => {
           resetDisabled: false
         });
         setGameState(GameState.dealerTurn); // or a new state that represents the end of a round
+        setBalance(data.players.find((player: { name: string; }) => player.name === "Player 1").balance);
       } else {
         // Update your state variables here based on the current game state
         // setUserCards, setDealerCards, etc.

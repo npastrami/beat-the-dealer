@@ -13,24 +13,31 @@ def start_game():
     # Get the number of decks and players from the request
     num_decks = int(request.json.get('numDecks', 0))
     num_players = int(request.json.get('numPlayers', 0))
+    bet_amount = int(request.json.get('betAmount', 0))  # Retrieve the bet amount from the request
 
     # Log the received parameters
     print("Number of Decks:", num_decks)
     print("Number of Players:", num_players)
+    print("Bet Amount:", bet_amount)
 
     # Initialize the Game object with the provided parameters
     game = Game(num_decks=num_decks, num_players=num_players)
     
+    # Start the game, which should shuffle the deck
     game.start_game()
-    
+
+    # Place the initial bet for each player
+    for player in game.players:
+        player.bet(0, bet_amount)  # Assume the bet is always for the first hand at the start
+
     # Deal initial cards
     game.deal_initial_cards()
 
-    # Log initial game state
+    # Get the updated game state which should now include the bets
     initial_game_state = game.get_game_state()
     print("Initial Game State:", initial_game_state)
 
-    # Return a success response along with the initial game state
+    # Return a success response along with the updated initial game state
     return jsonify({'message': 'Game started successfully', 'gameState': initial_game_state})
 
 @app.route('/hit', methods=['POST'])

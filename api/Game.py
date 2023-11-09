@@ -55,8 +55,8 @@ class Game:
         return self.get_game_state()
 
     def player_action_double_down(self, player):
-        if player.bet(player.current_bet):  # Double the current bet
-            self.player_action_hit(player)  # Get exactly one more card
+        if player.bet(0, player.bets[0]):  # Make sure the index 0 is used if only one hand is present
+            self.player_action_hit(player.name)  # Get exactly one more card
 
     def dealer_action(self):
         while self.dealer.should_hit():
@@ -79,7 +79,7 @@ class Game:
                 result = "lose"
             elif dealer_busted or player_hand_value > dealer_value:
                 result = "win"
-                player.win()  # Update player's money if they win
+                player.win(0)  # Update player's money if they win
             elif player_hand_value == dealer_value:
                 result = "push"
             else:
@@ -154,7 +154,7 @@ class Game:
                     for j, hand in enumerate(player.hands)
                 ],
                 'chips': player.money,
-                'current_bet': player.current_bet,
+                'current_bets': player.bets,
             }
             for i, player in enumerate(self.players)
         ]
@@ -177,7 +177,7 @@ class Game:
                     for j, hand in enumerate(player.hands)
                 ],
                 'chips': player.money,
-                'current_bet': player.current_bet,
+                'current_bet': player.bets,
             }
             for i, player in enumerate(self.players)
         ]

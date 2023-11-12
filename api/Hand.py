@@ -18,3 +18,6 @@ class Hand:
 
     def is_busted(self):
         return self.calculate_value() > 21
+    
+    def get_cards(self):
+        return self.cards

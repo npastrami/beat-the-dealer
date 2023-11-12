@@ -3,16 +3,25 @@ from Deck import Deck
 from Dealer import Dealer
 from Player import Player
 from Hand import Hand
+from RoundData import RoundData
+from Database import Database
+from ThorpStrategyBet import ThorpStrategyBet
+from ThorpStrategyAction import ThorpStrategyAction
 
 class Game:
-    def __init__(self, num_decks=1, num_players=1, stop_card_index=None):
+    def __init__(self, num_decks=1, num_players=1, stop_card_index=None, user_id=None):
         self.num_decks = num_decks
         self.num_players = num_players
         self.stop_card_index = stop_card_index
-        self.round_data = []
+        self.round_data = RoundData()
+        self.database = Database(user_id)  # Assuming user_id is passed as an argument
+        self.database.connect()  # Connect to the database
         self.players = []
         self.deck = None  
         self.dealer = None
+        self.thorp_bet_strategy = ThorpStrategyBet()
+        self.thorp_action_strategy = ThorpStrategyAction(thorp_count=0)
+        self.round_number = 1
 
     def start_game(self):
         self.deck = Deck(self.num_decks)
@@ -20,10 +29,35 @@ class Game:
         self.dealer = Dealer()
         self.players = [Player(f"Player {i+1}") for i in range(self.num_players)]
         
+    def update_running_count(self, card):
+        # Example: Implement the logic to update running count based on the card
+        if card.rank in ['2', '3', '4', '5', '6']:
+            self.round_data.running_count += 1
+        elif card.rank in ['10', 'J', 'Q', 'K', 'A']:
+            self.round_data.running_count -= 1
+        
+        self.thorp_bet_strategy.update_running_count(self.round_data.running_count)
+        
+    def insert_seen_card_to_db(self, card):
+        self.database.insert_seen_card(self.round_data.round_number, card)
+
     def deal_initial_cards(self):
+        self.round_data.round_number = self.round_number
         for _ in range(2):
             for player in self.players + [self.dealer]:
-                player.hands[0].add_card(self.deck.deal())
+                card = self.deck.deal()
+                player.hands[0].add_card(card)
+                self.insert_seen_card_to_db(card)  # Directly insert card to DB
+                self.update_running_count(card)
+
+        dealer_upcard = self.dealer.hands[0].cards[0]
+        self.calculate_and_update_recommendations(dealer_upcard)
+        
+    def calculate_and_update_recommendations(self, dealer_upcard):
+        for player in self.players:
+            recommended_bet = self.thorp_bet_strategy.recommend_bet()
+            recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard)
+            self.round_data.update_recommendations(recommended_bet, recommended_action)
 
     def player_action_hit(self, player_name):
         print(f"Attempting to hit for player: {player_name}")
@@ -38,8 +72,16 @@ class Game:
         card_dealt = self.deck.deal()
         print(f"Card dealt: {card_dealt.suit}, {card_dealt.rank}")
         
-        player.hands[0].add_card(card_dealt)  # Assuming the first hand
+        player.hands[0].add_card(card_dealt)# Assuming the first hand
+        self.insert_seen_card_to_db(card_dealt) 
         print(f"Card added to {player_name}'s hand.")
+        
+        # Update RoundData
+        self.round_data.update_player_hand(player_name, player.hands[0].get_cards())
+        self.round_data.record_player_action(player_name, 'Hit')
+
+        dealer_upcard = self.dealer.hands[0].cards[0]
+        self.calculate_and_update_recommendations(dealer_upcard)
         
         updated_game_state = self.get_game_state()
         print(f"Updated Game State: {updated_game_state}")
@@ -48,10 +90,12 @@ class Game:
 
     def player_action_stand(self, player_name):
         player = next((p for p in self.players if p.name == player_name), None)
-        print("stood")
         if not player:
             return {'error': 'Player not found'}
         
+        self.round_data.record_player_action(player_name, 'Stand')
+        dealer_upcard = self.dealer.hands[0].cards[0]
+        self.calculate_and_update_recommendations(dealer_upcard)
         return self.get_game_state()
 
     def player_action_double_down(self, player):
@@ -61,18 +105,17 @@ class Game:
     def dealer_action(self):
         while self.dealer.should_hit():
             new_card = self.deck.deal()
-            print(f"Dealer hits: {new_card.suit}, {new_card.rank}")
             self.dealer.hands[0].add_card(new_card)
+            print(new_card.suit, new_card.rank)
+            self.insert_seen_card_to_db(new_card)  # Directly insert dealer's new card to DB
+            self.update_running_count(new_card)
             
     def determine_round_winner(self):
-        # This method assumes that the dealer has already played their hand
         dealer_value = self.dealer.hands[0].calculate_value()
-        print(dealer_value)
         dealer_busted = dealer_value > 21
 
         for player in self.players:
             player_hand_value = player.hands[0].calculate_value()
-            print(player_hand_value) # Assuming only one hand per player
             player_busted = player_hand_value > 21
 
             if player_busted:
@@ -85,16 +128,11 @@ class Game:
             else:
                 result = "lose"
 
-            # Update round_data with the results of this round
-            self.round_data.append({
-                'player_name': player.name,
-                'player_hand_value': player_hand_value,
-                'dealer_hand_value': dealer_value,
-                'result': result
-            })
+            self.round_data.update_round_results(
+                player.name, player_hand_value, dealer_value, result
+            )
 
-        # Return round data with the results
-        return self.round_data
+        return self.round_data.round_results
 
 
     # Modify the play_round method in the Game class
@@ -196,33 +234,14 @@ class Game:
         }
         
     def check_round_completion(self):
-        # Check if all players have finished their actions
         all_done = all(player.has_stood or player.hands[0].is_busted() for player in self.players)
-
         if all_done:
-            # Perform dealer actions if all players are done
             self.dealer_action()
-
-            # Determine the winner of the round
             round_results = self.determine_round_winner()
-
-            # Optionally, prepare for the next round
-            self.prepare_next_round()
-
             return round_results
+        return None
 
-        return None  # If the round is not complete, return None
-    
     def prepare_next_round(self):
-        # Reset the round data
-        self.round_data = []
-
-        # Clear players' hands and reset their status
         for player in self.players:
             player.reset_for_new_round()
-
-        # Clear dealer's hand
         self.dealer.reset_for_new_round()
-
-        # Deal new cards
-        self.deal_initial_cards()

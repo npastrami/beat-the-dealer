@@ -122,7 +122,6 @@ const App: React.FC = () => {
       console.log(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserCards(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserScore(playerHand.hands[0].hand_value)
-      setDealerScore(playerHand.hands[0].hand_value)
       setBalance(playerHand.balance);
     } catch (error) {
       console.error("Error hitting:", error);
@@ -143,8 +142,7 @@ const App: React.FC = () => {
   
       const data = await response.json();
       if (data.roundResults) {
-        // Assuming roundResults has the structure: { winner: "Player" or "Dealer", playerScore: number, dealerScore: number }
-        const result = data.roundResults[0]; // If there are multiple players, this will need adjustment
+        const result = data.roundResults[0];
         setUserScore(result.player_hand_value);
         setDealerScore(result.dealer_hand_value);
         setMessage(result.result === "win" ? Message.userWin : result.result === "lose" ? Message.dealerWin : Message.tie);
@@ -154,14 +152,41 @@ const App: React.FC = () => {
           standDisabled: true,
           resetDisabled: false
         });
-        setGameState(GameState.dealerTurn); // or a new state that represents the end of a round
-        setBalance(data.players.find((player: { name: string; }) => player.name === "Player 1").balance);
-      } else {
-        // Update your state variables here based on the current game state
-        // setUserCards, setDealerCards, etc.
+        setGameState(GameState.dealerTurn);
+        setBalance((data.players || []).find((player: { name: string; }) => player.name === "Player 1")?.balance || balance);
       }
     } catch (error) {
       console.error("Error standing:", error);
+    }
+  };
+
+  const nextRound = async () => {
+    try {
+      const response = await fetch("/next_round", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+  
+      if (response.ok) {
+        // Clear current cards and scores
+        setUserCards([]);
+        setUserScore(0);
+        setDealerCards([]);
+        setDealerScore(0);
+  
+        // Transition to betting phase for the new round
+        setGameState(GameState.bet);
+        setMessage(Message.bet);
+        setButtonState({
+          hitDisabled: false,
+          standDisabled: false,
+          resetDisabled: true
+        });
+      } else {
+        console.error("Failed to start the next round");
+      }
+    } catch (error) {
+      console.error("An error occurred while starting the next round:", error);
     }
   };
 
@@ -198,6 +223,7 @@ const App: React.FC = () => {
         hitEvent={hit}
         standEvent={stand}
         resetEvent={resetGame}
+        nextRoundEvent={nextRound}
       />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />
       <Hand title={`Your Hand (${userScore})`} cards={userCards} />

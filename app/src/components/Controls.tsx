@@ -8,10 +8,11 @@ type ControlsProps = {
   betEvent: any,
   hitEvent: any,
   standEvent: any,
-  resetEvent: any
+  resetEvent: any,
+  nextRoundEvent: () => Promise<void>
 };
 
-const Controls: React.FC<ControlsProps> = ({ balance, gameState, buttonState, betEvent, hitEvent, standEvent, resetEvent }) => {
+const Controls: React.FC<ControlsProps> = ({ balance, gameState, buttonState, betEvent, hitEvent, standEvent, resetEvent, nextRoundEvent }) => {
   const [amount, setAmount] = useState(10);
   const [inputStyle, setInputStyle] = useState(styles.input);
 
@@ -59,6 +60,7 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, buttonState, be
         <div className={styles.controlsContainer}>
           <button onClick={() => hitEvent()} disabled={buttonState.hitDisabled} className={styles.button}>Hit</button>
           <button onClick={() => standEvent()} disabled={buttonState.standDisabled} className={styles.button}>Stand</button>
+          <button onClick={() => nextRoundEvent()} disabled={buttonState.nextRoundDisabled} className={styles.button}>Next Round</button>
           <button onClick={() => resetEvent()} disabled={buttonState.resetDisabled} className={styles.button}>Reset</button>
         </div>
       );

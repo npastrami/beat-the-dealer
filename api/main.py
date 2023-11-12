@@ -80,11 +80,14 @@ def stand():
         for result in round_results:
             print(f"{result['player_name']} {result['result']} against the dealer with hand value {result['player_hand_value']} to dealer's {result['dealer_hand_value']}.")
         print("Round complete, returning results.")
-        return jsonify({'roundResults': round_results})
+        return jsonify({'roundResults': round_results, 'gameState': game.get_game_state()})  # Include gameState
 
     # If the round is not complete, just return the current game state
     print("Round not complete, continuing game.")
-    return jsonify(game.get_game_state()) 
+    current_game_state = game.get_game_state()
+    if 'players' not in current_game_state:
+        current_game_state['players'] = []  # Ensure players key exists
+    return jsonify(current_game_state)
 
 @app.route('/double', methods=['POST'])
 def double_down():
@@ -130,6 +133,18 @@ def return_round_results():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'error': 'An error occurred while processing round results'}), 500
+
+@app.route('/next_round', methods=['POST'])
+def next_round():
+    global game
+
+    # Logic to start the next round
+    game.prepare_next_round()
+
+    # Fetch the updated game state
+    updated_game_state = game.get_game_state()
+
+    return jsonify({'message': 'Next round started successfully', 'gameState': updated_game_state})
 
 if __name__ == '__main__':
     app.run(debug=True)

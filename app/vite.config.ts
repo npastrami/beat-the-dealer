@@ -9,6 +9,7 @@ export default defineConfig({
       '/hit': 'http://localhost:5000',
       '/stand': 'http://localhost:5000',
       '/start': 'http://localhost:5000',
+      '/next_round': 'http://localhost:5000',
     },
   },
 });

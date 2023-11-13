@@ -42,6 +42,7 @@ class Game:
         self.database.insert_seen_card(self.round_data.round_number, card)
 
     def deal_initial_cards(self):
+        self.round_number += 1
         self.round_data.round_number = self.round_number
         for _ in range(2):
             for player in self.players + [self.dealer]:

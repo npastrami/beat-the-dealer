@@ -4,15 +4,14 @@ import styles from './styles/Controls.module.css';
 type ControlsProps = {
   balance: number,
   gameState: number,
-  buttonState: any,
-  betEvent: any,
-  hitEvent: any,
-  standEvent: any,
-  resetEvent: any,
-  nextRoundEvent: () => Promise<void>
+  startEvent: () => Promise<void>,
+  betEvent: (amount: number) => Promise<void>,
+  hitEvent: () => Promise<void>,
+  standEvent: () => Promise<void>,
+  nextRoundEvent: () => Promise<void>,
 };
 
-const Controls: React.FC<ControlsProps> = ({ balance, gameState, buttonState, betEvent, hitEvent, standEvent, resetEvent, nextRoundEvent }) => {
+const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent }) => {
   const [amount, setAmount] = useState(10);
   const [inputStyle, setInputStyle] = useState(styles.input);
 
@@ -44,34 +43,35 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, buttonState, be
   }
 
   const getControls = () => {
-    if (gameState === 0) {
-      return (
-        <div className={styles.controlsContainer}>
-          <div className={styles.betContainer}>
-            <h4>Amount:</h4>
-            <input autoFocus type='number' value={amount} onChange={amountChange} className={inputStyle} />
+    switch (gameState) {
+      case 0: // Start
+        return <button onClick={startEvent} className={styles.button}>Start Game</button>;
+      case 1: // Bet
+        return (
+          <div className={styles.controlsContainer}>
+            <div className={styles.betContainer}>
+              <h4>Amount:</h4>
+              <input autoFocus type='number' value={amount} onChange={amountChange} className={inputStyle} />
+            </div>
+            <button onClick={onBetClick} className={styles.button}>Bet</button>
           </div>
-          <button onClick={() => onBetClick()} className={styles.button}>Bet</button>
-        </div>
-      );
-    }
-    else {
-      return (
-        <div className={styles.controlsContainer}>
-          <button onClick={() => hitEvent()} disabled={buttonState.hitDisabled} className={styles.button}>Hit</button>
-          <button onClick={() => standEvent()} disabled={buttonState.standDisabled} className={styles.button}>Stand</button>
-          <button onClick={() => nextRoundEvent()} disabled={buttonState.nextRoundDisabled} className={styles.button}>Next Round</button>
-          <button onClick={() => resetEvent()} disabled={buttonState.resetDisabled} className={styles.button}>Reset</button>
-        </div>
-      );
+        );
+      case 2: // Init, User Turn, Dealer Turn
+      case 3:
+      case 4:
+        return (
+          <div className={styles.controlsContainer}>
+            <button onClick={hitEvent} className={styles.button}>Hit</button>
+            <button onClick={standEvent} className={styles.button}>Stand</button>
+            <button onClick={nextRoundEvent} className={styles.button}>Next Round</button>
+          </div>
+        );
+      default:
+        return null;
     }
   }
 
-  return (
-    <>
-      {getControls()}
-    </>
-  );
+  return <>{getControls()}</>;
 }
 
 export default Controls;

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from Game import Game
 # main branch for git
 app = Flask(__name__)
+game = None
 
 @app.route('/start', methods=['POST'])
 def start_game():
@@ -140,11 +141,29 @@ def next_round():
 
     # Logic to start the next round
     game.prepare_next_round()
+    
+    game.deal_initial_cards()
 
     # Fetch the updated game state
     updated_game_state = game.get_game_state()
 
     return jsonify({'message': 'Next round started successfully', 'gameState': updated_game_state})
 
+@app.route('/bet', methods=['POST'])
+def place_bet():
+    global game
+    player_name = request.json.get('player_name')
+    bet_amount = int(request.json.get('betAmount', 0))
+
+    player = next((p for p in game.players if p.name == player_name), None)
+    if not player:
+        return jsonify({'error': 'Player not found'}), 400
+
+    player.bet(0, bet_amount)  # Update the bet for the player
+
+    return jsonify({'message': 'Bet placed successfully', 'gameState': game.get_game_state()})
+
 if __name__ == '__main__':
     app.run(debug=True)
+    
+    

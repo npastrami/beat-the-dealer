@@ -126,5 +126,3 @@ class Database:
         finally:
             cursor.close()
             
-    def __del__(self):
-        self.database.close()

@@ -1,17 +1,20 @@
-import React, { useState } from 'react';  // Removed useEffect
+import React, { useState } from 'react';
 import Status from './Status';
 import Controls from './Controls';
 import Hand from './Hand';
 
 const App: React.FC = () => {
   enum GameState {
+    start,
     bet,
     init,
     userTurn,
-    dealerTurn
+    dealerTurn,
+    roundOver
   }
 
   enum Message {
+    start = 'Press Start to Play!',
     bet = 'Place a Bet!',
     hitStand = 'Hit or Stand?',
     bust = 'Bust!',
@@ -22,15 +25,12 @@ const App: React.FC = () => {
 
   const [userCards, setUserCards]: any[] = useState([]);
   const [userScore, setUserScore] = useState(0);
-
   const [dealerCards, setDealerCards]: any[] = useState([]);
   const [dealerScore, setDealerScore] = useState(0);
-
   const [balance, setBalance] = useState(1000);
   const [bet, setBet] = useState(0);
-
-  const [gameState, setGameState] = useState(GameState.bet);
-  const [message, setMessage] = useState(Message.bet);
+  const [gameState, setGameState] = useState(GameState.start);
+  const [message, setMessage] = useState(Message.start);
 
   const [buttonState, setButtonState] = useState({
     hitDisabled: false,
@@ -54,54 +54,63 @@ const App: React.FC = () => {
     });
   };
 
-  const placeBet = async (amount: number) => {
+  const startGame = async () => {
     try {
       const response = await fetch("/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        // If your backend expects specific data, include it here
+        // For example, if it needs the number of players or decks, you could send it like this:
         body: JSON.stringify({
           numDecks: 1,
-          numPlayers: 1,
-          betAmount: amount,
-        }),
+          numPlayers: 1
+        })
       });
   
       if (response.ok) {
         const data = await response.json();
-        const playersData = data?.gameState?.players;
-        const dealerData = data?.gameState?.dealer;
-
-        console.log(data);
-  
-        if (playersData && playersData.length > 0 && playersData[0].hands && playersData[0].hands[0].cards) {
-          setUserCards(playersData[0].hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
-          setUserScore(playersData[0].hands[0].hand_value);
-          setBalance(playersData[0].chips);
-        } else {
-          console.error("Unexpected gameState structure for players", playersData);
-          return;
-        }
-  
-        if (dealerData && dealerData.hand) {
-          setDealerCards(dealerData.hand.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
-          setDealerScore(dealerData.hand_value);
-        } else {
-          console.error("Unexpected gameState structure for dealer", dealerData);
-          return;
-        }
-
-        console.log("Set userCards to:", playersData[0].hands[0].cards);  // Log the set value of userCards
-        console.log("Set dealerCards to:", dealerData.hand);  // Log the set value of dealerCards
-  
-        setBet(amount);
-        setGameState(GameState.init);
+        // Handle the response data as needed
+        setGameState(GameState.bet);
+        setMessage(Message.bet);
       } else {
         console.error("Failed to start game");
       }
     } catch (error) {
       console.error("An error occurred:", error);
+    }
+  };
+
+  const placeBet = async (amount: number) => {
+    try {
+      const response = await fetch("/bet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_name: "Player 1", betAmount: amount })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        updateGameState(data.gameState);
+        setBet(amount);
+        setGameState(GameState.userTurn);
+      } else {
+        console.error("Failed to place bet");
+      }
+    } catch (error) {
+      console.error("An error occurred:", error);
+    }
+  };
+
+  const updateGameState = (data: any) => {
+    if (data && data.players && data.players.length > 0 && data.players[0].hands && data.players[0].hands[0].cards) {
+      setUserCards(data.players[0].hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
+      setUserScore(data.players[0].hands[0].hand_value);
+      setBalance(data.players[0].chips);
+    }
+    if (data && data.dealer && data.dealer.hand) {
+      setDealerCards(data.dealer.hand.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })));
+      setDealerScore(data.dealer.hand_value);
     }
   };
 
@@ -152,7 +161,7 @@ const App: React.FC = () => {
           standDisabled: true,
           resetDisabled: false
         });
-        setGameState(GameState.dealerTurn);
+        setGameState(GameState.userTurn);
         setBalance((data.players || []).find((player: { name: string; }) => player.name === "Player 1")?.balance || balance);
       }
     } catch (error) {
@@ -218,11 +227,10 @@ const App: React.FC = () => {
       <Controls
         balance={balance}
         gameState={gameState}
-        buttonState={buttonState}
+        startEvent={startGame}
         betEvent={placeBet}
         hitEvent={hit}
         standEvent={stand}
-        resetEvent={resetGame}
         nextRoundEvent={nextRound}
       />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />

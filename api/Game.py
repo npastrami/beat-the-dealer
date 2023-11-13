@@ -24,6 +24,7 @@ class Game:
         self.round_number = 1
 
     def start_game(self):
+        print("in start game")
         self.deck = Deck(self.num_decks)
         self.deck.shuffle()
         self.dealer = Dealer()
@@ -242,6 +243,8 @@ class Game:
         return None
 
     def prepare_next_round(self):
+        self.round_number += 1  # Increment round number for the new round
+        self.round_data.start_new_round()
         for player in self.players:
             player.reset_for_new_round()
         self.dealer.reset_for_new_round()

@@ -9,7 +9,7 @@ from ThorpStrategyBet import ThorpStrategyBet
 from ThorpStrategyAction import ThorpStrategyAction
 
 class Game:
-    def __init__(self, num_decks=1, num_players=1, stop_card_index=None, user_id=None):
+    def __init__(self, num_decks=2, num_players=1, stop_card_index=None, user_id=None):
         self.num_decks = num_decks
         self.num_players = num_players
         self.stop_card_index = stop_card_index

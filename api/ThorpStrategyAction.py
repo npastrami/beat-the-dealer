@@ -2,7 +2,7 @@ class ThorpStrategyAction:
     def __init__(self, thorp_count):
         self.thorp_count = thorp_count
 
-    def recommend_move(self, player_hand, dealer_upcard):
+    def recommend_move(self,  player_hand, dealer_upcard, seen_cards):
         p_value = player_hand.calculate_value()
         d_value = dealer_upcard.point_value if dealer_upcard.rank != 'A' else 11
         p_cards = player_hand.cards

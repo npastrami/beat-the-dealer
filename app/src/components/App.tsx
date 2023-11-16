@@ -64,7 +64,7 @@ const App: React.FC = () => {
         // If your backend expects specific data, include it here
         // For example, if it needs the number of players or decks, you could send it like this:
         body: JSON.stringify({
-          numDecks: 1,
+          numDecks: 2,
           numPlayers: 1
         })
       });

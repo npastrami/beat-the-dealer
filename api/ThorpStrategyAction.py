@@ -5,9 +5,7 @@ class ThorpStrategyAction:
         """
         self.total_points = 0  
         self.total_unseen_cards = 52 * num_decks  
-        self.high_low_index = 0
-        self.hard_hand_decision_dict = hard_hand_decision_dict
-        self.soft_hand_decision_dict = soft_hand_decision_dict  
+        self.high_low_index = 0  
 
     def update_running_count(self, card):
         """
@@ -50,15 +48,15 @@ class ThorpStrategyAction:
 
     def recommend_move(self, player_hand, dealer_upcard):
         player_total = player_hand.calculate_value()
-        dealer_upcard_value = dealer_upcard.point_value()  
+        dealer_upcard_value = dealer_upcard.point_value 
         is_soft_hand = player_hand.is_soft()
         can_split = player_hand.can_split()
 
         # Logic for hard hands using Table 7.1
         if not is_soft_hand and not can_split:
             decision_key = (player_total, dealer_upcard_value)
-            if decision_key in self.hard_hand_decision_dict:
-                decision_threshold = self.hard_hand_decision_dict[decision_key]
+            if decision_key in hard_hand_decision_dict:
+                decision_threshold = hard_hand_decision_dict[decision_key]
                 if decision_threshold is not None:
                     if self.high_low_index <= decision_threshold:
                         return 'Hit'
@@ -67,8 +65,8 @@ class ThorpStrategyAction:
         # Logic for soft hands using Table 7.2
         elif is_soft_hand:
             decision_key = (player_total, dealer_upcard_value)
-            if decision_key in self.soft_hand_decision_dict:
-                decision_threshold = self.soft_hand_decision_dict[decision_key]
+            if decision_key in soft_hand_decision_dict:
+                decision_threshold = soft_hand_decision_dict[decision_key]
                 if decision_threshold is not None:
                     if self.high_low_index <= decision_threshold:
                         return 'Hit'
@@ -87,7 +85,7 @@ class ThorpStrategyAction:
         # Logic for soft doubling down using Table 7.4
         if is_soft_hand:
             player_hand_key = 'A,' + str(player_hand.calculate_value() - 11)  # Assuming Ace is always valued at 11 here
-            dealer_upcard_key = str(dealer_upcard.point_value())
+            dealer_upcard_key = str(dealer_upcard.point_value)
             
             # Special case for A,6 against dealer's 2
             if player_hand_key == 'A,6' and dealer_upcard_key == '2':
@@ -112,8 +110,8 @@ class ThorpStrategyAction:
                 decision_key = (player_hand_key, str(dealer_upcard_value))
 
                 # Check if there's a specific decision for this pair and dealer card
-                if decision_key in self.split_decision_dict:
-                    decision_threshold = self.split_decision_dict[decision_key]
+                if decision_key in split_decision_dict:
+                    decision_threshold = split_decision_dict[decision_key]
 
                     # Check for special conditions or a range
                     if isinstance(decision_threshold, list):

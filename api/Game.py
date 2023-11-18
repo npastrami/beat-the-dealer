@@ -60,8 +60,8 @@ class Game:
     def calculate_and_update_recommendations(self, dealer_upcard):
         for player in self.players:
             recommended_bet = self.thorp_bet_strategy.recommend_bet()
-            print(dealer_upcard)
-            recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard.point_value)
+            if dealer_upcard:
+                recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard)
             self.round_data.update_recommendations(recommended_bet, recommended_action)
 
     def player_action_hit(self, player_name):
@@ -258,6 +258,9 @@ class Game:
         # For simplicity, I'm assuming you're storing the last recommendation somewhere in your class
         last_player = self.players[-1] if self.players else None
         if last_player:
-            dealer_upcard = self.dealer.hands[0].cards[0] if self.dealer.hands else None
-            return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
-        return "No recommendation"  # default message if no players or dealer
+            dealer_upcard = self.dealer.hands[0].cards[0] if self.dealer.hands[0].cards else None
+            if dealer_upcard:
+                print(f"in game method :{self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)}")
+                return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
+            else:
+                return "No recommendation"

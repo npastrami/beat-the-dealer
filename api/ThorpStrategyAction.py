@@ -19,6 +19,7 @@ class ThorpStrategyAction:
 
         # Update total_unseen_cards
         self.total_unseen_cards -= 1
+        print(f"Total Points: {self.total_points}, Total Unseen Cards: {self.total_unseen_cards}")
         self.calculate_high_low_index()
 
     def calculate_high_low_index(self):
@@ -29,6 +30,7 @@ class ThorpStrategyAction:
             self.high_low_index = self.total_points / self.total_unseen_cards
         else:
             self.high_low_index = 0
+        print(f"New High-Low Index: {self.high_low_index}")
 
         self.high_low_index *= 100
 
@@ -48,82 +50,74 @@ class ThorpStrategyAction:
 
     def recommend_move(self, player_hand, dealer_upcard):
         player_total = player_hand.calculate_value()
-        dealer_upcard_value = dealer_upcard.point_value 
+        dealer_upcard_value = dealer_upcard.point_value
+        print(f"Dealer upcard: {dealer_upcard.suit}, {dealer_upcard.rank}")
+        print(f"Current Hi-Lo Count: {self.high_low_index}")
         is_soft_hand = player_hand.is_soft()
         can_split = player_hand.can_split()
 
         # Logic for hard hands using Table 7.1
         if not is_soft_hand and not can_split:
+            print("hard hand")
             decision_key = (player_total, dealer_upcard_value)
-            if decision_key in hard_hand_decision_dict:
-                decision_threshold = hard_hand_decision_dict[decision_key]
-                if decision_threshold is not None:
-                    if self.high_low_index <= decision_threshold:
-                        return 'Hit'
-                    else:
-                        return 'Stand'
+            decision_threshold = hard_hand_decision_dict.get(decision_key)
+            if decision_threshold is not None:
+                print(f"Decision Threshold 7.1: {decision_threshold}")
+                if self.high_low_index <= decision_threshold:
+                    return 'Hit'
+                else:
+                    return 'Stand'
+
         # Logic for soft hands using Table 7.2
         elif is_soft_hand:
+            print("soft hand")
             decision_key = (player_total, dealer_upcard_value)
-            if decision_key in soft_hand_decision_dict:
-                decision_threshold = soft_hand_decision_dict[decision_key]
-                if decision_threshold is not None:
-                    if self.high_low_index <= decision_threshold:
-                        return 'Hit'
-                    else:
-                        return 'Stand'
+            decision_threshold = soft_hand_decision_dict.get(decision_key)
+            if decision_threshold is not None:
+                if self.high_low_index <= decision_threshold:
+                    return 'Hit'
+                else:
+                    return 'Stand'
+
         # Logic for hard doubling down using Table 7.3
         if not is_soft_hand and not can_split and player_total in [9, 10, 11]:
+            print("hard double")
             decision_key = (player_total, dealer_upcard_value)
-            if decision_key in hard_double_decision_dict:
-                decision_threshold = hard_double_decision_dict[decision_key]
-                if decision_threshold is not None:
-                    if self.high_low_index > decision_threshold:
-                        return 'Double'
-                    else:
-                        return 'Hit'
-        # Logic for soft doubling down using Table 7.4
-        if is_soft_hand:
-            player_hand_key = 'A,' + str(player_hand.calculate_value() - 11)  # Assuming Ace is always valued at 11 here
-            dealer_upcard_key = str(dealer_upcard.point_value)
-            
-            # Special case for A,6 against dealer's 2
-            if player_hand_key == 'A,6' and dealer_upcard_key == '2':
-                index_range = soft_double_decision_dict.get((player_hand_key, dealer_upcard_key))
-                if self.high_low_index >= index_range[0] and self.high_low_index <= index_range[1]:
+            decision_threshold = hard_double_decision_dict.get(decision_key)
+            if decision_threshold is not None:
+                if self.high_low_index > decision_threshold:
                     return 'Double'
-            
-            # General case for soft doubling down
+                else:
+                    return 'Hit'
+
+        # Logic for soft doubling down using Table 7.4
+        if is_soft_hand and not can_split:
+            print("soft double")
+            player_hand_key = 'A,' + str(player_hand.calculate_value() - 11)  # Assuming Ace is always valued at 11 here
+            dealer_upcard_key = str(dealer_upcard_value)
             decision_threshold = soft_double_decision_dict.get((player_hand_key, dealer_upcard_key))
             if decision_threshold is not None:
                 if isinstance(decision_threshold, list):
-                    # If the threshold is a list, it means there's a specific range to double down
-                    if self.high_low_index > decision_threshold[0] and self.high_low_index < decision_threshold[1]:
+                    if self.high_low_index >= decision_threshold[0] and self.high_low_index <= decision_threshold[1]:
                         return 'Double'
                 elif self.high_low_index > decision_threshold:
                     return 'Double'
-                    
-            # Logic for splitting pairs using Table 7.5
-            if can_split:
-                # Create a key for the decision dictionary based on player's hand and dealer's card
-                player_hand_key = ','.join([str(card.rank) for card in player_hand.cards])
-                decision_key = (player_hand_key, str(dealer_upcard_value))
 
-                # Check if there's a specific decision for this pair and dealer card
-                if decision_key in split_decision_dict:
-                    decision_threshold = split_decision_dict[decision_key]
-
-                    # Check for special conditions or a range
-                    if isinstance(decision_threshold, list):
-                        if decision_threshold[0] < self.high_low_index or self.high_low_index < decision_threshold[1]:
-                            return 'Split'
-                    elif self.high_low_index > decision_threshold:
+        # Logic for splitting pairs using Table 7.5
+        if can_split:
+            print("can split")
+            player_hand_key = ','.join([str(card.rank) for card in player_hand.cards])
+            decision_key = (player_hand_key, str(dealer_upcard_value))
+            decision_threshold = split_decision_dict.get(decision_key)
+            if decision_threshold is not None:
+                if isinstance(decision_threshold, list):
+                    if decision_threshold[0] < self.high_low_index or self.high_low_index < decision_threshold[1]:
                         return 'Split'
-                    else:
-                        return 'Hit'  # If the high-low index is not high enough to split, choose to hit
+                elif self.high_low_index > decision_threshold:
+                    return 'Split'
 
-            # If no other action is recommended, default to stand
-            return 'Stand'
+        # If no other action is recommended, default to stand
+        return 'Stand'
 
     def adjust_for_seen_card(self, card):
         """
@@ -133,41 +127,53 @@ class ThorpStrategyAction:
         self.update_running_count(card)
         
 hard_hand_decision_dict = {
-    (2, 2): 100, (2, 3): 100, (2, 4): 100, (2, 5): 100, (2, 6): 100, (2, 7): 100, 
-    (2, 8): 100, (2, 9): 100, (2, 10): 100, (2, 'A'): 100, (3, 2): 100, (3, 3): 100, 
-    (3, 4): 100, (3, 5): 100, (3, 6): 100, (3, 7): 100, (3, 8): 100, (3, 9): 100, 
-    (3, 10): 100, (3, 'A'): -15, (4, 2): -21, (4, 3): -25, (4, 4): -30, (4, 5): -34, 
-    (4, 6): -35, (4, 7): 10, (4, 8): 11, (4, 9): 6, (4, 10): 2, (4, 'A'): 14, 
-    (5, 2): -12, (5, 3): -17, (5, 4): -21, (5, 5): -26, (5, 6): -28, (5, 7): 13, 
-    (5, 8): 15, (5, 9): 12, (5, 10): 8, (5, 'A'): 16, (6, 2): -5, (6, 3): -8, 
-    (6, 4): -13, (6, 5): -17, (6, 6): -17, (6, 7): 20, (6, 8): 38, (6, 9): None, 
-    (6, 10): None, (6, 'A'): None, (7, 2): 1, (7, 3): -2, (7, 4): -5, (7, 5): -9, 
-    (7, 6): -8, (7, 7): 50, (7, 8): None, (7, 9): None, (7, 10): None, (7, 'A'): None, 
-    (8, 2): 14, (8, 3): 6, (8, 4): 2, (8, 5): -1, (8, 6): 0, (8, 7): None, 
-    (8, 8): None, (8, 9): None, (8, 10): None, (8, 'A'): None,
+    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    17: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': -15},
+    16: {'2': -21, '3': -25, '4': -30, '5': -34, '6': -35, '7': 10, '8': 11, '9': 6, '10': 2, 'A': 14},
+    15: {'2': -12, '3': -17, '4': -21, '5': -26, '6': -28, '7': 13, '8': 15, '9': 12, '10': 8, 'A': 16},
+    14: {'2': -5, '3': -8, '4': -13, '5': -17, '6': -17, '7': 20, '8': 38, '9': 100, '10': 100, 'A': 100},
+    13: {'2': 1, '3': -2, '4': -5, '5': -9, '6': -8, '7': 50, '8': 100, '9': 100, '10': 100, 'A': 100},
+    12: {'2': 14, '3': 6, '4': 2, '5': -1, '6': 0, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    
 }
 
 soft_hand_decision_dict = {
-    # For soft hands of 19 or more, always stand
-    (19, '2'): 100, (19, '3'): 100, (19, '4'): 100, (19, '5'): 100,
-    (19, '6'): 100, (19, '7'): 100, (19, '8'): 100, (19, '9'): 100,
-    (19, '10'): 100, (19, 'A'): 100,
-    (20, '2'): 100, 
+    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
+    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': 100, '10': 12, 'A': -6},
+    17: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 29, '8': 100, '9': 100, '10': 100, 'A': 100}, 
+    16: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    15: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    14: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    13: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    12: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    
+    
 
-    # For soft 18
-    (18, '2'): 100, (18, '3'): 100, (18, '4'): 100, (18, '5'): 100,
-    (18, '6'): 100, (18, '7'): 100, (18, '8'): 100,
-    (18, '9'): None, # Draw
-    (18, '10'): 12, # Draw if high-low count <= 12
-    (18, 'A'): -6,  # Draw if high-low count <= -6
-
-    # For soft 17
-    (17, '2'): None, (17, '3'): None, (17, '4'): None, (17, '5'): None,
-    (17, '6'): None, (17, '7'): 29,  
-    (17, '8'): None, (17, '9'): None, (17, '10'): None, (17, 'A'): None,
-
-    # For soft 16 and below, always draw
-    (16, '2'): None, 
 }
 
 hard_double_decision_dict = {

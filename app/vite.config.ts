@@ -11,6 +11,7 @@ export default defineConfig({
       '/bet': 'http://localhost:5000',
       '/start': 'http://localhost:5000',
       '/next_round': 'http://localhost:5000',
+      '/thorp_action': 'http://localhost:5000',
     },
   },
 });

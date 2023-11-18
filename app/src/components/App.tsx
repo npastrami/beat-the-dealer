@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import StrategyDisplay from './StrategyDisplay';
 import Status from './Status';
 import Controls from './Controls';
 import Hand from './Hand';
@@ -31,6 +32,7 @@ const App: React.FC = () => {
   const [bet, setBet] = useState(0);
   const [gameState, setGameState] = useState(GameState.start);
   const [message, setMessage] = useState(Message.start);
+  const [thorpSuggestion, setThorpSuggestion] = useState('');
 
   const [buttonState, setButtonState] = useState({
     hitDisabled: false,
@@ -94,6 +96,7 @@ const App: React.FC = () => {
         updateGameState(data.gameState);
         setBet(amount);
         setGameState(GameState.userTurn);
+        fetchThorpSuggestion();
       } else {
         console.error("Failed to place bet");
       }
@@ -132,6 +135,7 @@ const App: React.FC = () => {
       setUserCards(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserScore(playerHand.hands[0].hand_value)
       setBalance(playerHand.balance);
+      fetchThorpSuggestion();
     } catch (error) {
       console.error("Error hitting:", error);
     }
@@ -163,6 +167,7 @@ const App: React.FC = () => {
         });
         setGameState(GameState.userTurn);
         setBalance((data.players || []).find((player: { name: string; }) => player.name === "Player 1")?.balance || balance);
+        fetchThorpSuggestion();
       }
     } catch (error) {
       console.error("Error standing:", error);
@@ -199,6 +204,25 @@ const App: React.FC = () => {
     }
   };
 
+  const fetchThorpSuggestion = async () => {
+    try {
+      const response = await fetch('/thorp_action');
+      if (response.ok) {
+        const { suggestion } = await response.json();
+        setThorpSuggestion(suggestion);
+      } else {
+        console.error("Failed to fetch Thorp suggestion");
+      }
+    } catch (error) {
+      console.error("Error fetching Thorp Suggestion:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Call fetchThorpSuggestion every time the gameState changes
+    fetchThorpSuggestion();
+  }, [gameState]);
+
   // const bust = () => {
   //   buttonState.hitDisabled = true;
   //   buttonState.standDisabled = true;
@@ -233,6 +257,7 @@ const App: React.FC = () => {
         standEvent={stand}
         nextRoundEvent={nextRound}
       />
+      <StrategyDisplay suggestion={thorpSuggestion} />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />
       <Hand title={`Your Hand (${userScore})`} cards={userCards} />
     </>

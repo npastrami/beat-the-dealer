@@ -2,7 +2,7 @@ import random
 from Card import Card
 
 class Deck:
-    def __init__(self, num_decks=1):
+    def __init__(self, num_decks=2):
         self.cards = []
         self.num_decks = num_decks
         self.suits = ['♥', '♦', '♣', '♠']

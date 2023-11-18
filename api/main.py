@@ -163,6 +163,15 @@ def place_bet():
 
     return jsonify({'message': 'Bet placed successfully', 'gameState': game.get_game_state()})
 
+@app.route('/thorp_action', methods=['GET'])
+def thorp_action():
+    global game
+    if game:
+        suggestion = game.get_last_recommendation()
+        print(f"The suggestion: {suggestion}")
+        return jsonify({'suggestion': suggestion}), 200
+    return jsonify({'error': 'Game not initialized'}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)
     

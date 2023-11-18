@@ -20,7 +20,7 @@ class Game:
         self.deck = None  
         self.dealer = None
         self.thorp_bet_strategy = ThorpStrategyBet()
-        self.thorp_action_strategy = ThorpStrategyAction(thorp_count=0)
+        self.thorp_action_strategy = ThorpStrategyAction()
         self.round_number = 1
 
     def start_game(self):
@@ -51,13 +51,17 @@ class Game:
                 self.insert_seen_card_to_db(card)  # Directly insert card to DB
                 self.update_running_count(card)
 
-        dealer_upcard = self.dealer.hands[0].cards[0]
+        dealer_hand = self.dealer.hands[0].cards if self.dealer.hands else None
+        dealer_upcard = dealer_hand[0] if dealer_hand else None
+        print(f"Dealer Hand: {dealer_hand}")
+        print(f"Dealer Upcard: {dealer_upcard}")
         self.calculate_and_update_recommendations(dealer_upcard)
         
     def calculate_and_update_recommendations(self, dealer_upcard):
         for player in self.players:
             recommended_bet = self.thorp_bet_strategy.recommend_bet()
-            recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard)
+            print(dealer_upcard)
+            recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard.point_value)
             self.round_data.update_recommendations(recommended_bet, recommended_action)
 
     def player_action_hit(self, player_name):
@@ -248,3 +252,12 @@ class Game:
         for player in self.players:
             player.reset_for_new_round()
         self.dealer.reset_for_new_round()
+    
+    def get_last_recommendation(self):
+        # Logic to get the last recommendation based on the current state
+        # For simplicity, I'm assuming you're storing the last recommendation somewhere in your class
+        last_player = self.players[-1] if self.players else None
+        if last_player:
+            dealer_upcard = self.dealer.hands[0].cards[0] if self.dealer.hands else None
+            return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
+        return "No recommendation"  # default message if no players or dealer

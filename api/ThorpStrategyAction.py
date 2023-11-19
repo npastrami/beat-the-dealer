@@ -1,27 +1,31 @@
+from Database import Database
+
 class ThorpStrategyAction:
-    def __init__(self, num_decks=1):
+    def __init__(self, num_decks=2, database=None):
         """
         Initializes the Thorp Strategy Action class.
         """
         self.total_points = 0  
         self.total_unseen_cards = 52 * num_decks  
-        self.high_low_index = 0  
+        self.high_low_index = 0
+        self.num_decks = num_decks
+        self.database = database
 
-    def update_running_count(self, card):
+    def fetch_and_calculate_running_count(self):
         """
-        Updates the running count based on the seen card.
-        :param card: The card that has been seen.
+        Fetches all seen cards from the database and calculates the running count.
         """
-        if card.rank in ['2', '3', '4', '5', '6']:
-            self.total_points += 1
-        elif card.rank in ['10', 'J', 'Q', 'K', 'A']:
-            self.total_points -= 1
-
-        # Update total_unseen_cards
-        self.total_unseen_cards -= 1
-        print(f"Total Points: {self.total_points}, Total Unseen Cards: {self.total_unseen_cards}")
+        seen_cards = self.database.fetch_all_seen_cards()
+        print("Seen cards fetched:", seen_cards)
+        self.total_points = sum(
+            1 if card['rank'] in ['2', '3', '4', '5', '6'] else
+            -1 if card['rank'] in ['10', 'J', 'Q', 'K', 'A'] else
+            0
+            for card in seen_cards
+        )
+        self.total_unseen_cards = 52 * self.num_decks - len(seen_cards)
         self.calculate_high_low_index()
-
+        
     def calculate_high_low_index(self):
         """
         Calculates the high-low index based on current counts.
@@ -53,6 +57,7 @@ class ThorpStrategyAction:
         dealer_upcard_value = dealer_upcard.point_value
         print(f"Dealer upcard: {dealer_upcard.suit}, {dealer_upcard.rank}")
         print(f"Current Hi-Lo Count: {self.high_low_index}")
+        print(F"Total unseen cards: {self.total_unseen_cards}")
         is_soft_hand = player_hand.is_soft()
         can_split = player_hand.can_split()
 
@@ -61,6 +66,7 @@ class ThorpStrategyAction:
             print("hard hand")
             decision_key = (player_total, dealer_upcard_value)
             decision_threshold = hard_hand_decision_dict.get(decision_key)
+            print(f"Decision Threshold for hard_hand_decision_dict{decision_threshold}")
             if decision_threshold is not None:
                 print(f"Decision Threshold 7.1: {decision_threshold}")
                 if self.high_low_index <= decision_threshold:
@@ -124,7 +130,7 @@ class ThorpStrategyAction:
         Adjusts the counts based on a seen card.
         :param card: The card that has been seen.
         """
-        self.update_running_count(card)
+        self.fetch_and_calculate_running_count(card)
         
 hard_hand_decision_dict = {
     21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},

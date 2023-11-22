@@ -9,9 +9,11 @@ type ControlsProps = {
   hitEvent: () => Promise<void>,
   standEvent: () => Promise<void>,
   nextRoundEvent: () => Promise<void>,
+  numDecks: number;
+  setNumDecks: React.Dispatch<React.SetStateAction<number>>;
 };
 
-const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent }) => {
+const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent, numDecks, setNumDecks }) => {
   const [amount, setAmount] = useState(10);
   const [inputStyle, setInputStyle] = useState(styles.input);
 
@@ -42,10 +44,35 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, bet
     }
   }
 
+  const onStartClick = () => {
+    if (numDecks >= 1 && numDecks <= 8) { 
+      startEvent();
+    } else {
+      alert("Please enter a valid number of decks (1-8).");
+    }
+  }
+
   const getControls = () => {
     switch (gameState) {
-      case 0: // Start
-        return <button onClick={startEvent} className={styles.button}>Start Game</button>;
+      case 0:
+        return (
+          <>
+            <div className={styles.controlsContainer}>
+            <div className={styles.betContainer} style={{ display: 'flex', alignItems: 'right', paddingRight: '20px' }}>
+                <h4>Number of Decks:</h4>
+                <input 
+                  type="number" 
+                  value={numDecks} 
+                  onChange={(e) => setNumDecks(Number(e.target.value))} 
+                  className={inputStyle} 
+                  min="1" 
+                  max="8" // Adjust according to your game's rules
+                />
+              </div>
+              <button onClick={onStartClick} className={styles.button}>Start Game</button>
+              </div>
+          </>
+        );
       case 1: // Bet
         return (
           <div className={styles.controlsContainer}>

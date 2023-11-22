@@ -134,7 +134,7 @@ const App: React.FC = () => {
       console.log(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserCards(playerHand.hands[0].cards.map((card: [string, string]) => ({ suit: card[0], value: card[1], hidden: false })))
       setUserScore(playerHand.hands[0].hand_value)
-      setBalance(playerHand.balance);
+      setBalance((data.players || []).find((player: { name: string; }) => player.name === "Player 1")?.balance || balance);
       fetchThorpSuggestion();
     } catch (error) {
       console.error("Error hitting:", error);

@@ -155,7 +155,7 @@ const App: React.FC = () => {
   
       const data = await response.json();
       if (data.roundResults) {
-        const result = data.roundResults[0];
+        const result = data.roundResults[data.roundResults.length - 1];
         setUserScore(result.player_hand_value);
         setDealerScore(result.dealer_hand_value);
         setMessage(result.result === "win" ? Message.userWin : result.result === "lose" ? Message.dealerWin : Message.tie);

@@ -20,7 +20,7 @@ class Game:
         self.deck = None  
         self.dealer = None
         self.thorp_bet_strategy = ThorpStrategyBet()
-        self.thorp_action_strategy = ThorpStrategyAction()
+        self.thorp_action_strategy = ThorpStrategyAction(num_decks=self.num_decks, database=self.database)
         self.round_number = 1
 
     def start_game(self):
@@ -29,6 +29,8 @@ class Game:
         self.deck.shuffle()
         self.dealer = Dealer()
         self.players = [Player(f"Player {i+1}") for i in range(self.num_players)]
+        self.thorp_action_strategy.database = self.database  # Make sure the database is accessible
+        self.thorp_action_strategy.fetch_and_calculate_running_count()
         
     def update_running_count(self, card):
         # Example: Implement the logic to update running count based on the card
@@ -50,6 +52,7 @@ class Game:
                 player.hands[0].add_card(card)
                 self.insert_seen_card_to_db(card)  # Directly insert card to DB
                 self.update_running_count(card)
+                self.thorp_action_strategy.fetch_and_calculate_running_count()
 
         dealer_hand = self.dealer.hands[0].cards if self.dealer.hands else None
         dealer_upcard = dealer_hand[0] if dealer_hand else None
@@ -60,8 +63,8 @@ class Game:
     def calculate_and_update_recommendations(self, dealer_upcard):
         for player in self.players:
             recommended_bet = self.thorp_bet_strategy.recommend_bet()
-            print(dealer_upcard)
-            recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard.point_value)
+            if dealer_upcard:
+                recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard)
             self.round_data.update_recommendations(recommended_bet, recommended_action)
 
     def player_action_hit(self, player_name):
@@ -258,6 +261,9 @@ class Game:
         # For simplicity, I'm assuming you're storing the last recommendation somewhere in your class
         last_player = self.players[-1] if self.players else None
         if last_player:
-            dealer_upcard = self.dealer.hands[0].cards[0] if self.dealer.hands else None
-            return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
-        return "No recommendation"  # default message if no players or dealer
+            dealer_upcard = self.dealer.hands[0].cards[0] if self.dealer.hands[0].cards else None
+            if dealer_upcard:
+                print(f"in game method :{self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)}")
+                return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
+            else:
+                return "No recommendation"

@@ -54,76 +54,60 @@ class ThorpStrategyAction:
 
     def recommend_move(self, player_hand, dealer_upcard):
         player_total = player_hand.calculate_value()
-        dealer_upcard_value = dealer_upcard.point_value
+        dealer_upcard_value = str(dealer_upcard.point_value)
         print(f"Dealer upcard: {dealer_upcard.suit}, {dealer_upcard.rank}")
         print(f"Current Hi-Lo Count: {self.high_low_index}")
+        
         print(F"Total unseen cards: {self.total_unseen_cards}")
         is_soft_hand = player_hand.is_soft()
         can_split = player_hand.can_split()
 
-        # Logic for hard hands using Table 7.1
+        # Logic for hard hands
         if not is_soft_hand and not can_split:
-            print("hard hand")
-            decision_key = (player_total, dealer_upcard_value)
-            decision_threshold = hard_hand_decision_dict.get(decision_key)
-            print(f"Decision Threshold for hard_hand_decision_dict{decision_threshold}")
+            decision_threshold = hard_hand_decision_dict.get(player_total, {}).get(dealer_upcard_value)
+            print(f"7.1 Decision_Threshold: {decision_threshold}, player total: {player_total}, dealer upcard: {dealer_upcard_value}")
             if decision_threshold is not None:
-                print(f"Decision Threshold 7.1: {decision_threshold}")
-                if self.high_low_index <= decision_threshold:
-                    return 'Hit'
-                else:
-                    return 'Stand'
-
-        # Logic for soft hands using Table 7.2
+                return 'Hit 7.1' if self.high_low_index <= decision_threshold else 'Stand 7.1'
+        # Logic for soft hands
         elif is_soft_hand:
-            print("soft hand")
-            decision_key = (player_total, dealer_upcard_value)
-            decision_threshold = soft_hand_decision_dict.get(decision_key)
+            decision_threshold = soft_hand_decision_dict.get(player_total, {}).get(dealer_upcard_value)
+            print(f"7.2 Decision_Threshold: {decision_threshold}, player total: {player_total}, dealer upcard: {dealer_upcard_value}")
             if decision_threshold is not None:
-                if self.high_low_index <= decision_threshold:
-                    return 'Hit'
-                else:
-                    return 'Stand'
-
-        # Logic for hard doubling down using Table 7.3
+                return 'Hit 7.2' if self.high_low_index <= decision_threshold else 'Stand 7.2'
+        # Logic for hard doubling down
         if not is_soft_hand and not can_split and player_total in [9, 10, 11]:
-            print("hard double")
-            decision_key = (player_total, dealer_upcard_value)
-            decision_threshold = hard_double_decision_dict.get(decision_key)
+            decision_threshold = hard_double_decision_dict.get((player_total, dealer_upcard_value))
+            print(f"7.3 Decision_Threshold: {decision_threshold}, player total: {player_total}, dealer upcard: {dealer_upcard_value}")
             if decision_threshold is not None:
-                if self.high_low_index > decision_threshold:
-                    return 'Double'
-                else:
-                    return 'Hit'
-
-        # Logic for soft doubling down using Table 7.4
-        if is_soft_hand and not can_split:
-            print("soft double")
-            player_hand_key = 'A,' + str(player_hand.calculate_value() - 11)  # Assuming Ace is always valued at 11 here
-            dealer_upcard_key = str(dealer_upcard_value)
-            decision_threshold = soft_double_decision_dict.get((player_hand_key, dealer_upcard_key))
+                return 'Double 7.3' if self.high_low_index > decision_threshold else 'Hit 7.3'
+        # Logic for soft doubling down
+        if is_soft_hand and player_total in range(12, 22):  # Ace valued as 11, hence range 12 to 21
+            player_hand_key = 'A,' + str(player_total - 11)
+            decision_threshold = soft_double_decision_dict.get((player_hand_key, dealer_upcard_value))
+            print(f"7.4 Decision_Threshold: {decision_threshold}, player total: {player_total}, dealer upcard: {dealer_upcard_value}")
             if decision_threshold is not None:
                 if isinstance(decision_threshold, list):
-                    if self.high_low_index >= decision_threshold[0] and self.high_low_index <= decision_threshold[1]:
-                        return 'Double'
+                    if decision_threshold[0] <= self.high_low_index <= decision_threshold[1]:
+                        return 'Double 7.4'
                 elif self.high_low_index > decision_threshold:
-                    return 'Double'
-
-        # Logic for splitting pairs using Table 7.5
+                    return 'Double 7.4'
+        # Logic for splitting pairs
         if can_split:
-            print("can split")
-            player_hand_key = ','.join([str(card.rank) for card in player_hand.cards])
-            decision_key = (player_hand_key, str(dealer_upcard_value))
-            decision_threshold = split_decision_dict.get(decision_key)
+            player_hand_key = ','.join(sorted([str(card.rank) for card in player_hand.cards]))
+            decision_threshold = split_decision_dict.get((player_hand_key, dealer_upcard_value))
+            print(f"7.5 Decision_Threshold: {decision_threshold}, player total: {player_total}, dealer upcard: {dealer_upcard_value}")
             if decision_threshold is not None:
                 if isinstance(decision_threshold, list):
-                    if decision_threshold[0] < self.high_low_index or self.high_low_index < decision_threshold[1]:
-                        return 'Split'
+                    if decision_threshold[0] <= self.high_low_index <= decision_threshold[1]:
+                        return 'Split 7.5'
                 elif self.high_low_index > decision_threshold:
-                    return 'Split'
+                    return 'Split 7.5'
+                
+        if is_soft_hand and player_total <= 16:
+            return 'Hit 7.2.2'
 
         # If no other action is recommended, default to stand
-        return 'Stand'
+        return 'Stand general'
 
     def adjust_for_seen_card(self, card):
         """
@@ -133,50 +117,50 @@ class ThorpStrategyAction:
         self.fetch_and_calculate_running_count(card)
         
 hard_hand_decision_dict = {
-    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    17: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': -15},
-    16: {'2': -21, '3': -25, '4': -30, '5': -34, '6': -35, '7': 10, '8': 11, '9': 6, '10': 2, 'A': 14},
-    15: {'2': -12, '3': -17, '4': -21, '5': -26, '6': -28, '7': 13, '8': 15, '9': 12, '10': 8, 'A': 16},
-    14: {'2': -5, '3': -8, '4': -13, '5': -17, '6': -17, '7': 20, '8': 38, '9': 100, '10': 100, 'A': 100},
-    13: {'2': 1, '3': -2, '4': -5, '5': -9, '6': -8, '7': 50, '8': 100, '9': 100, '10': 100, 'A': 100},
-    12: {'2': 14, '3': 6, '4': 2, '5': -1, '6': 0, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    17: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': -15},
+    16: {'2': -21, '3': -25, '4': -30, '5': -34, '6': -35, '7': 10, '8': 11, '9': 6, '10': 2, '11': 14},
+    15: {'2': -12, '3': -17, '4': -21, '5': -26, '6': -28, '7': 13, '8': 15, '9': 12, '10': 8, '11': 16},
+    14: {'2': -5, '3': -8, '4': -13, '5': -17, '6': -17, '7': 20, '8': 38, '9': 100, '10': 100, '11': 100},
+    13: {'2': 1, '3': -2, '4': -5, '5': -9, '6': -8, '7': 50, '8': 100, '9': 100, '10': 100, '11': 100},
+    12: {'2': 14, '3': 6, '4': 2, '5': -1, '6': 0, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
     
 }
 
 soft_hand_decision_dict = {
-    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, 'A': None},
-    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': 100, '10': 12, 'A': -6},
-    17: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 29, '8': 100, '9': 100, '10': 100, 'A': 100}, 
-    16: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    15: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    14: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    13: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    12: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
-    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, 'A': 100},
+    21: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    20: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    19: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': None, '10': None, '11': None},
+    18: {'2': None, '3': None, '4': None, '5': None, '6': None, '7': None, '8': None, '9': 100, '10': 12, '11': -6},
+    17: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 29, '8': 100, '9': 100, '10': 100, '11': 100}, 
+    16: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    15: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    14: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    13: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    12: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    11: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    10: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    9: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    8: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    7: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    6: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    5: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    4: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    3: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
+    2: {'2': 100, '3': 100, '4': 100, '5': 100, '6': 100, '7': 100, '8': 100, '9': 100, '10': 100, '11': 100},
     
     
 
@@ -208,13 +192,14 @@ soft_double_decision_dict = {
 }
 
 split_decision_dict = {
-            ('A,A', '7'): -33, ('A,A', '8'): -24, ('A,A', '9'): -22, ('A,A', '10'): -20, ('A,A', 'A'): -17,
-            ('10,10', '2'): 25, ('10,10', '3'): 17, ('10,10', '4'): 10, ('10,10', '5'): 6, ('10,10', '6'): 7, ('10,10', '7'): 19,
-            ('9,9', '2'): -3, ('9,9', '3'): -8, ('9,9', '4'): -10, ('9,9', '5'): -15, ('9,9', '6'): -14, ('9,9', '7'): -8, ('9,9', '8'): -16, ('9,9', '9'): -22, ('9,9', 'A'): 10,
-            ('8,8', '10'): 24,
-            ('7,7', '2'): -22, ('7,7', '3'): -29, ('7,7', '4'): -35,
-            ('6,6', '2'): 0, ('6,6', '3'): -3, ('6,6', '4'): -8, ('6,6', '5'): -13, ('6,6', '6'): -16, ('6,6', '7'): -8,
-            ('4,4', '6'): 5,
-            ('3,3', '8'): [6, -2],
-            ('2,2', '2'): -9, ('2,2', '3'): -15, ('2,2', '4'): -22, ('2,2', '5'): -30,
-        }
+    'A,A': {'2': -100, '3': -100, '4': -100, '5': -100, '6': -100, '7': -33, '8': -24, '9': -22, '10': -20, 'A': -17},
+    '10,10': {'2': 25, '3': 17, '4': 10, '5': 6, '6': 7, '7': 19, '8': 200, '9': 200, '10': 200, 'A': 200},
+    '9,9': {'2': -3, '3': -8, '4': -10, '5': -15, '6': -14, '7': -8, '8': -16, '9': -22, '10': 200, 'A': 10},
+    '8,8': {'2': -100, '3': -100, '4': -100, '5': -100, '6': -100, '7': -100, '8': -100, '9': -100, '10': 24, 'A': -18},
+    '7,7': {'2': -22, '3': -29, '4': -35, '5': -100, '6': -100, '7': -100, '8': -100, '9': 200, '10': 200, 'A': 200},
+    '6,6': {'2': 0, '3': -3, '4': -8, '5': -13, '6': -16, '7': -8, '8': 200, '9': 200, '10': 200, 'A': 200},
+    '5,5': {'2': 200, '3': 200, '4': 200, '5': 200, '6': 200, '7': 200, '8': 200, '9': 200, '10': 200, 'A': 200},
+    '4,4': {'2': 200, '3': 18, '4': 8, '5': 0, '6': 5, '7': 200, '8': 200, '9': 200, '10': 200, 'A': 200},
+    '3,3': {'2': -21, '3': -23, '4': -100, '5': -100, '6': -100, '7': -100, '8': [-2, 6], '9': 200, '10': 200, 'A': 200},
+    '2,2': {'2': -9, '3': -15, '4': -22, '5': -30, '6': -100, '7': -100, '8': 200, '9': 200, '10': 200, 'A': 200},
+}

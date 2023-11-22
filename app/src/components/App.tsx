@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState(GameState.start);
   const [message, setMessage] = useState(Message.start);
   const [thorpSuggestion, setThorpSuggestion] = useState('');
+  const [numDecks, setNumDecks] = useState(1);
 
   const [buttonState, setButtonState] = useState({
     hitDisabled: false,
@@ -66,7 +67,7 @@ const App: React.FC = () => {
         // If your backend expects specific data, include it here
         // For example, if it needs the number of players or decks, you could send it like this:
         body: JSON.stringify({
-          numDecks: 2,
+          numDecks: numDecks,
           numPlayers: 1
         })
       });
@@ -256,6 +257,8 @@ const App: React.FC = () => {
         hitEvent={hit}
         standEvent={stand}
         nextRoundEvent={nextRound}
+        numDecks={numDecks}
+        setNumDecks={setNumDecks}
       />
       <StrategyDisplay suggestion={thorpSuggestion} />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />

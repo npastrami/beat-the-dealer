@@ -1,12 +1,16 @@
 from Database import Database
 
 class ThorpStrategyAction:
-    def __init__(self, num_decks=2, database=None):
+    def __init__(self, num_decks=1, stop_card_index=0.5, database=None):
         """
         Initializes the Thorp Strategy Action class.
+        :param num_decks: Number of decks being used.
+        :param stop_card_index: The position of the stop card as a decimal (e.g., 0.75 for 75% through the deck).
+        :param database: Instance of the database class for fetching seen cards.
         """
-        self.total_points = 0  
-        self.total_unseen_cards = 52 * num_decks  
+        self.total_points = 0
+        self.stop_card_index = stop_card_index  # Ensure this is a decimal representing the percentage (0 to 1)
+        self.total_unseen_cards = int(52 * num_decks * ((self.stop_card_index)/100))  # Calculate total unseen cards based on stop card position
         self.high_low_index = 0
         self.num_decks = num_decks
         self.database = database
@@ -23,7 +27,7 @@ class ThorpStrategyAction:
             0
             for card in seen_cards
         )
-        self.total_unseen_cards = 52 * self.num_decks - len(seen_cards)
+        self.total_unseen_cards = 52 * self.num_decks * ((self.stop_card_index)/100) - len(seen_cards)
         self.calculate_high_low_index()
         
     def calculate_high_low_index(self):

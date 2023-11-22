@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [message, setMessage] = useState(Message.start);
   const [thorpSuggestion, setThorpSuggestion] = useState('');
   const [numDecks, setNumDecks] = useState(1);
+  const [stopCard, setStopCard] = useState(50);
 
   const [buttonState, setButtonState] = useState({
     hitDisabled: false,
@@ -68,7 +69,8 @@ const App: React.FC = () => {
         // For example, if it needs the number of players or decks, you could send it like this:
         body: JSON.stringify({
           numDecks: numDecks,
-          numPlayers: 1
+          numPlayers: 1,
+          stopCardIndex: stopCard,
         })
       });
   
@@ -259,6 +261,8 @@ const App: React.FC = () => {
         nextRoundEvent={nextRound}
         numDecks={numDecks}
         setNumDecks={setNumDecks}
+        stopCard={stopCard}
+        setStopCard={setStopCard}
       />
       <StrategyDisplay suggestion={thorpSuggestion} />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />

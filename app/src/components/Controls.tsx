@@ -11,9 +11,11 @@ type ControlsProps = {
   nextRoundEvent: () => Promise<void>,
   numDecks: number;
   setNumDecks: React.Dispatch<React.SetStateAction<number>>;
+  stopCard: number;
+  setStopCard: React.Dispatch<React.SetStateAction<number>>;
 };
 
-const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent, numDecks, setNumDecks }) => {
+const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent, numDecks, setNumDecks, stopCard, setStopCard }) => {
   const [amount, setAmount] = useState(10);
   const [inputStyle, setInputStyle] = useState(styles.input);
 
@@ -56,9 +58,9 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, bet
     switch (gameState) {
       case 0:
         return (
-          <>
-            <div className={styles.controlsContainer}>
-            <div className={styles.betContainer} style={{ display: 'flex', alignItems: 'right', paddingRight: '20px' }}>
+          <div className={styles.startContainer}>
+            <div className={styles.inputsContainer}>
+              <div className={styles.betContainer}>
                 <h4>Number of Decks:</h4>
                 <input 
                   type="number" 
@@ -66,12 +68,23 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, bet
                   onChange={(e) => setNumDecks(Number(e.target.value))} 
                   className={inputStyle} 
                   min="1" 
-                  max="8" // Adjust according to your game's rules
+                  max="8"
                 />
               </div>
-              <button onClick={onStartClick} className={styles.button}>Start Game</button>
+              <div className={styles.betContainer}>
+                <h4>Stop Card Position (%):</h4>
+                <input 
+                  type="number" 
+                  value={stopCard} 
+                  onChange={(e) => setStopCard(Number(e.target.value))} 
+                  className={inputStyle} 
+                  min="0" 
+                  max="100"
+                />
               </div>
-          </>
+            </div>
+            <button onClick={onStartClick} className={styles.startButton}>Start Game</button>
+          </div>
         );
       case 1: // Bet
         return (

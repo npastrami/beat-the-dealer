@@ -21,8 +21,12 @@ def start_game():
     print("Number of Players:", num_players)
     print("Bet Amount:", bet_amount)
 
-    # Initialize the Game object with the provided parameters
-    game = Game(num_decks=num_decks, num_players=num_players)
+    stop_card_index = int(request.json.get('stopCardIndex', 0))  # Default to 1.0 if not provided
+    
+    print("Stop card index", stop_card_index)
+
+    # Initialize the Game object with the provided parameters including stop_card_index
+    game = Game(num_decks=num_decks, num_players=num_players, stop_card_index=stop_card_index)
     
     # Start the game, which should shuffle the deck
     game.start_game()

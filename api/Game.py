@@ -20,17 +20,22 @@ class Game:
         self.deck = None  
         self.dealer = None
         self.thorp_bet_strategy = ThorpStrategyBet()
-        self.thorp_action_strategy = ThorpStrategyAction(num_decks=self.num_decks, database=self.database)
+        self.thorp_action_strategy = ThorpStrategyAction(num_decks=self.num_decks, stop_card_index=self.stop_card_index, database=self.database)
         self.round_number = 1
+        self.stop_card_index = stop_card_index
+        self.stop_card_position = int((stop_card_index / 100) * num_decks * 52)  # Convert percentage to the card number
+        print(f"stop card index: {stop_card_index}")
 
     def start_game(self):
         print("in start game")
-        self.deck = Deck(self.num_decks)
+        self.deck = Deck(self.num_decks, self.stop_card_position)
         self.deck.shuffle()
+        self.deck.set_stop_card_position(self.stop_card_position)
         self.dealer = Dealer()
         self.players = [Player(f"Player {i+1}") for i in range(self.num_players)]
         self.thorp_action_strategy.database = self.database  # Make sure the database is accessible
         self.thorp_action_strategy.fetch_and_calculate_running_count()
+        print(f"start game decks: {self.num_decks}, stop card position: {self.stop_card_index}, {self.stop_card_position}")
         
     def update_running_count(self, card):
         # Example: Implement the logic to update running count based on the card
@@ -43,16 +48,22 @@ class Game:
         
     def insert_seen_card_to_db(self, card):
         self.database.insert_seen_card(self.round_data.round_number, card)
+        
+    def deal_card(self, player):
+        if self.deck.is_time_to_shuffle():  # This function checks if the next card is the stop card
+            self.deck.shuffle()
+            self.deck.reset_count()  # Reset the count in the Deck class
+        card = self.deck.deal()
+        player.hands[0].add_card(card)
+        self.insert_seen_card_to_db(card)
+        self.update_running_count(card)
+        self.thorp_action_strategy.fetch_and_calculate_running_count()
 
     def deal_initial_cards(self):
         self.round_data.round_number = self.round_number
         for _ in range(2):
             for player in self.players + [self.dealer]:
-                card = self.deck.deal()
-                player.hands[0].add_card(card)
-                self.insert_seen_card_to_db(card)  # Directly insert card to DB
-                self.update_running_count(card)
-                self.thorp_action_strategy.fetch_and_calculate_running_count()
+                self.deal_card(player)
 
         dealer_hand = self.dealer.hands[0].cards if self.dealer.hands else None
         dealer_upcard = dealer_hand[0] if dealer_hand else None

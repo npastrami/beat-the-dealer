@@ -13,9 +13,10 @@ type ControlsProps = {
   setNumDecks: React.Dispatch<React.SetStateAction<number>>;
   stopCard: number;
   setStopCard: React.Dispatch<React.SetStateAction<number>>;
+  reshuffleEvent: () => Promise<void>;
 };
 
-const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent, numDecks, setNumDecks, stopCard, setStopCard }) => {
+const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, betEvent, hitEvent, standEvent, nextRoundEvent, numDecks, setNumDecks, stopCard, setStopCard, reshuffleEvent }) => {
   const [amount, setAmount] = useState(10);
   const [inputStyle, setInputStyle] = useState(styles.input);
 
@@ -103,6 +104,7 @@ const Controls: React.FC<ControlsProps> = ({ balance, gameState, startEvent, bet
           <div className={styles.controlsContainer}>
             <button onClick={hitEvent} className={styles.button}>Hit</button>
             <button onClick={standEvent} className={styles.button}>Stand</button>
+            <button onClick={reshuffleEvent} className={styles.button}>Reshuffle</button>
             <button onClick={nextRoundEvent} className={styles.button}>Next Round</button>
           </div>
         );

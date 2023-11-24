@@ -226,6 +226,28 @@ const App: React.FC = () => {
     fetchThorpSuggestion();
   }, [gameState]);
 
+  const reshuffle = async () => {
+    const newStopCardPosition = prompt("Enter new stop card position (%):", "50");
+    if (newStopCardPosition !== null) {
+      try {
+        const response = await fetch('/reshuffle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newStopCardPosition: parseInt(newStopCardPosition) })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          updateGameState(data.gameState);
+          // Optional: reset other states if necessary
+        } else {
+          console.error('Failed to reshuffle');
+        }
+      } catch (error) {
+        console.error('Error during reshuffle:', error);
+      }
+    }
+  };
+
   // const bust = () => {
   //   buttonState.hitDisabled = true;
   //   buttonState.standDisabled = true;
@@ -263,6 +285,7 @@ const App: React.FC = () => {
         setNumDecks={setNumDecks}
         stopCard={stopCard}
         setStopCard={setStopCard}
+        reshuffleEvent={reshuffle}
       />
       <StrategyDisplay suggestion={thorpSuggestion} />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />

@@ -1,4 +1,5 @@
 import json
+from Card import Card
 from Deck import Deck
 from Dealer import Dealer
 from Player import Player
@@ -22,6 +23,7 @@ class Game:
         self.thorp_bet_strategy = ThorpStrategyBet()
         self.thorp_action_strategy = ThorpStrategyAction(num_decks=self.num_decks, stop_card_index=self.stop_card_index, database=self.database)
         self.round_number = 1
+        self.reshuffle_number = 1
         self.stop_card_index = stop_card_index
         self.stop_card_position = int((stop_card_index / 100) * num_decks * 52)  # Convert percentage to the card number
         print(f"stop card index: {stop_card_index}")
@@ -34,7 +36,7 @@ class Game:
         self.dealer = Dealer()
         self.players = [Player(f"Player {i+1}") for i in range(self.num_players)]
         self.thorp_action_strategy.database = self.database  # Make sure the database is accessible
-        self.thorp_action_strategy.fetch_and_calculate_running_count()
+        self.thorp_action_strategy.fetch_and_calculate_running_count(self.reshuffle_number, self.deck.stop_card_position)
         print(f"start game decks: {self.num_decks}, stop card position: {self.stop_card_index}, {self.stop_card_position}")
         
     def update_running_count(self, card):
@@ -47,17 +49,17 @@ class Game:
         self.thorp_bet_strategy.update_running_count(self.round_data.running_count)
         
     def insert_seen_card_to_db(self, card):
-        self.database.insert_seen_card(self.round_data.round_number, card)
+        self.database.insert_seen_card(self.round_data.round_number, self.reshuffle_number, card)
         
     def deal_card(self, player):
         if self.deck.is_time_to_shuffle():  # This function checks if the next card is the stop card
-            self.deck.shuffle()
-            self.deck.reset_count()  # Reset the count in the Deck class
+            self.reshuffle_deck()  # Call reshuffle deck here instead if you need to reshuffle
         card = self.deck.deal()
         player.hands[0].add_card(card)
         self.insert_seen_card_to_db(card)
         self.update_running_count(card)
-        self.thorp_action_strategy.fetch_and_calculate_running_count()
+        # Pass the current stop card position to the method
+        self.thorp_action_strategy.fetch_and_calculate_running_count(self.reshuffle_number, self.deck.stop_card_position)
 
     def deal_initial_cards(self):
         self.round_data.round_number = self.round_number
@@ -278,3 +280,25 @@ class Game:
                 return self.thorp_action_strategy.recommend_move(last_player.hands[0], dealer_upcard)
             else:
                 return "No recommendation"
+            
+    def reshuffle_deck(self, new_stop_card_position_percent):
+        # Bring back all seen cards
+        seen_cards = self.database.fetch_seen_cards_for_reshuffle(self.reshuffle_number)
+        for card_info in seen_cards:
+            self.deck.add_card(Card(card_info['suit'], card_info['rank']))
+
+        # Reset seen cards in the database and increment reshuffle number
+        self.database.increment_reshuffle_number(self.round_number)
+
+        # Update stop card position
+        total_deck_cards = 52 * self.num_decks
+        self.stop_card_position = int((new_stop_card_position_percent / 100) * total_deck_cards)
+        self.deck.rebuild_deck(self.num_decks, self.stop_card_position)
+        self.deck.shuffle()
+        self.deck.reset_count()
+
+        # Reset the running count & Update stop card index in ThorpStrategyAction
+        self.thorp_action_strategy.update_stop_card_index(new_stop_card_position_percent)
+        self.thorp_action_strategy.reset_running_count()
+        self.thorp_action_strategy.fetch_and_calculate_running_count(self.reshuffle_number, self.deck.stop_card_position)
+        self.reshuffle_number += 1

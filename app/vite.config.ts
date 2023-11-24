@@ -12,6 +12,7 @@ export default defineConfig({
       '/start': 'http://localhost:5000',
       '/next_round': 'http://localhost:5000',
       '/thorp_action': 'http://localhost:5000',
+      '/reshuffle': 'http://localhost:5000',
     },
   },
 });

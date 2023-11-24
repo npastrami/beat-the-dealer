@@ -176,7 +176,17 @@ def thorp_action():
         return jsonify({'suggestion': suggestion}), 200
     return jsonify({'error': 'Game not initialized'}), 400
 
+@app.route('/reshuffle', methods=['POST'])
+def reshuffle_deck():
+    global game
+    new_stop_card_position = int(request.json.get('newStopCardPosition', 50)) # Default value
+
+    # Reshuffle the deck and update the stop card position
+    game.reshuffle_deck(new_stop_card_position)
+
+    # Return the updated game state
+    return jsonify({'message': 'Deck reshuffled successfully', 'gameState': game.get_game_state()})
+
 if __name__ == '__main__':
     app.run(debug=True)
-    
     

@@ -14,6 +14,19 @@ class Deck:
             for suit in self.suits:
                 for rank in self.ranks:
                     self.cards.append(Card(suit, rank))
+                    
+    def rebuild_deck(self, num_decks, new_stop_card_position):
+        self.cards.clear()  # Clear the existing cards
+        self.cards_dealt = 0  # Reset the dealt count
+        self.stop_card_position = new_stop_card_position
+        # Rebuild the deck with the correct number of cards based on the new stop card position
+        for _ in range(num_decks):
+            for suit in self.suits:
+                for rank in self.ranks:
+                    self.cards.append(Card(suit, rank))
+        # If the stop card position is not at the end of the deck, truncate the deck
+        if new_stop_card_position < len(self.cards):
+            self.cards = self.cards[:new_stop_card_position]
     
     def shuffle(self):
         random.shuffle(self.cards)
@@ -31,3 +44,6 @@ class Deck:
     
     def reset_count(self):
         self.cards_dealt = 0
+    
+    def add_card(self, card):
+        self.cards.append(card)

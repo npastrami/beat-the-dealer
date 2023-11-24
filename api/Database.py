@@ -28,6 +28,7 @@ class Database:
             cursor.execute(""" 
                 CREATE TABLE IF NOT EXISTS seen_cards (
                     round_number INT,
+                    reshuffle_number INT,
                     card_suit TEXT,
                     card_rank TEXT
                 );
@@ -39,14 +40,14 @@ class Database:
         finally:
             cursor.close()
             
-    def insert_seen_card(self, round_number, card):
+    def insert_seen_card(self, round_number, reshuffle_number, card):
         cursor = self.connection.cursor()
         try:
             seen_cards_query = """
-                INSERT INTO seen_cards (round_number, card_suit, card_rank)
-                VALUES (%s, %s, %s)
+                INSERT INTO seen_cards (round_number, reshuffle_number, card_suit, card_rank)
+                VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(seen_cards_query, (round_number, card.suit, card.rank))
+            cursor.execute(seen_cards_query, (round_number, reshuffle_number, card.suit, card.rank))
             self.connection.commit()
         except psycopg2.DatabaseError as e:
             self.connection.rollback()
@@ -54,27 +55,47 @@ class Database:
         finally:
             cursor.close()
             
-    def fetch_all_seen_cards(self):
-        """
-        Fetches all seen cards from the database.
-        """
+    def fetch_seen_cards_for_reshuffle(self, reshuffle_number):
         cursor = self.connection.cursor()
         try:
-            cursor.execute("SELECT card_suit, card_rank FROM seen_cards")
+            query = "SELECT card_suit, card_rank FROM seen_cards WHERE reshuffle_number = %s"
+            cursor.execute(query, (reshuffle_number,))
             seen_cards = cursor.fetchall()
             self.connection.commit()
-            print("Fetched seen cards from DB:", seen_cards)
             return [{'suit': suit, 'rank': rank} for suit, rank in seen_cards]
         except psycopg2.DatabaseError as e:
-            print(f"Error fetching seen cards: {e}")
+            print(f"Error fetching seen cards for reshuffle: {e}")
             raise e
         finally:
             cursor.close()
+            
+    # def reset_seen_cards(self):
+    #     cursor = self.connection.cursor()
+    #     try:
+    #         cursor.execute("TRUNCATE TABLE seen_cards")
+    #         self.connection.commit()
+    #     except psycopg2.DatabaseError as e:
+    #         self.connection.rollback()
+    #         print(f"Error resetting seen cards: {e}")
+    #     finally:
+    #         cursor.close()
 
-    def close(self):
-        if self.connection:
-            self.connection.close()
-            print("Database connection closed")
+    def increment_reshuffle_number(self, current_round_number):
+        cursor = self.connection.cursor()
+        try:
+            # Update only the rounds that are greater than the current round number
+            update_query = """
+                UPDATE seen_cards
+                SET reshuffle_number = reshuffle_number + 1
+                WHERE round_number > %s
+            """
+            cursor.execute(update_query, (current_round_number,))
+            self.connection.commit()
+        except psycopg2.DatabaseError as e:
+            self.connection.rollback()
+            print(f"Error incrementing reshuffle number: {e}")
+        finally:
+            cursor.close()
             
     def get_latest_round_data(self, round_number):
         cursor = self.connection.cursor()
@@ -90,4 +111,8 @@ class Database:
             raise e
         finally:
             cursor.close()
-            
+    
+    def close(self):
+        if self.connection:
+            self.connection.close()
+            print("Database connection closed")

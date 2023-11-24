@@ -47,3 +47,4 @@ class RoundData:
     def update_recommendations(self, recommended_bet, recommended_action):
         self.recommended_bet = recommended_bet
         self.recommended_action = recommended_action
+    

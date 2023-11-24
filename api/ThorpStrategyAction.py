@@ -15,11 +15,12 @@ class ThorpStrategyAction:
         self.num_decks = num_decks
         self.database = database
 
-    def fetch_and_calculate_running_count(self):
+    def fetch_and_calculate_running_count(self, reshuffle_number, current_stop_card_position):
         """
         Fetches all seen cards from the database and calculates the running count.
+        Accepts the current stop card position to correctly calculate total unseen cards.
         """
-        seen_cards = self.database.fetch_all_seen_cards()
+        seen_cards = self.database.fetch_seen_cards_for_reshuffle(reshuffle_number)
         print("Seen cards fetched:", seen_cards)
         self.total_points = sum(
             1 if card['rank'] in ['2', '3', '4', '5', '6'] else
@@ -27,8 +28,25 @@ class ThorpStrategyAction:
             0
             for card in seen_cards
         )
-        self.total_unseen_cards = 52 * self.num_decks * ((self.stop_card_index)/100) - len(seen_cards)
+        self.total_unseen_cards = current_stop_card_position - len(seen_cards)
         self.calculate_high_low_index()
+        
+    def reset_running_count(self):
+        self.total_points = 0
+        self.high_low_index = 0
+        # Recalculate total_unseen_cards using the updated stop_card_index
+        total_deck_cards = 52 * self.num_decks
+        stop_card_position = int(total_deck_cards * self.stop_card_index)  # Use updated stop_card_index
+        self.total_unseen_cards = total_deck_cards - stop_card_position
+        self.calculate_high_low_index()
+        
+    def update_stop_card_index(self, new_stop_card_position_percent):
+    # Convert percentage to the card number for the stop card position
+        self.stop_card_index = new_stop_card_position_percent / 100
+        total_deck_cards = 52 * self.num_decks
+        self.stop_card_position = int(self.stop_card_index * total_deck_cards)
+        self.total_unseen_cards = total_deck_cards - self.stop_card_position
+        self.reset_running_count()
         
     def calculate_high_low_index(self):
         """

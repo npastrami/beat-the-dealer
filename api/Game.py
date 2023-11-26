@@ -119,9 +119,26 @@ class Game:
         self.calculate_and_update_recommendations(dealer_upcard)
         return self.get_game_state()
 
-    def player_action_double_down(self, player):
-        if player.bet(0, player.bets[0]):  # Make sure the index 0 is used if only one hand is present
-            self.player_action_hit(player.name)  # Get exactly one more card
+    def player_action_double_down(self, player_name):
+        player = next((p for p in self.players if p.name == player_name), None)
+        if not player:
+            return {'error': 'Player not found'}
+
+        # Double the bet amount for the first hand
+        hand_index = 0  # Assuming the first hand for doubling down
+        current_bet = player.bets[hand_index]
+        if not player.bet(hand_index, current_bet):
+            return {'error': 'Insufficient funds to double down'}
+
+        # Deal one more card to the player's hand
+        self.deal_card(player)
+
+        # Mark the player's turn as complete
+        player.has_stood = True
+
+        # Update game state and return it
+        updated_game_state = self.get_game_state()
+        return updated_game_state
 
     def dealer_action(self):
         while self.dealer.should_hit():

@@ -177,6 +177,26 @@ const App: React.FC = () => {
     }
   };
 
+  const doubleDown = async () => {
+    try {
+      const response = await fetch("/double", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          player_name: "Player 1",
+        }),
+      });
+  
+      const data = await response.json();
+      updateGameState(data.gameState);
+      fetchThorpSuggestion();
+    } catch (error) {
+      console.error("Error during double down:", error);
+    }
+  };
+
   const nextRound = async () => {
     try {
       const response = await fetch("/next_round", {
@@ -286,6 +306,7 @@ const App: React.FC = () => {
         stopCard={stopCard}
         setStopCard={setStopCard}
         reshuffleEvent={reshuffle}
+        doubleDownEvent={doubleDown}
       />
       <StrategyDisplay suggestion={thorpSuggestion} />
       <Hand title={`Dealer's Hand (${dealerScore})`} cards={dealerCards} />

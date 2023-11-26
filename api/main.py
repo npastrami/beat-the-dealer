@@ -98,13 +98,20 @@ def stand():
 def double_down():
     global game
     player_name = request.json.get('player_name')
-    player = next((p for p in game.players if p.name == player_name), None)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 400
+    if game and player_name:
+        game.player_action_double_down(player_name)
+        
+        # Check if the round is complete
+        round_results = game.check_round_completion()
 
-    game.player_action_double_down(player)
+        # If the round is complete, print and return the results
+        if round_results is not None:
+            return jsonify({'roundResults': round_results, 'gameState': game.get_game_state()})
 
-    return jsonify(game.get_game_state())  
+        # If the round is not complete, just return the current game state
+        return jsonify(game.get_game_state()), 200
+
+    return jsonify({'error': 'Game not initialized or player not found'}), 400
 
 @app.route('/split', methods=['POST'])
 def split():

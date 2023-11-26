@@ -104,9 +104,22 @@ class Game:
         dealer_upcard = self.dealer.hands[0].cards[0]
         self.calculate_and_update_recommendations(dealer_upcard)
         
+        # Check if player busted
+        if player.hands[0].is_busted():
+            print(f"Player {player_name} busted.")
+            player.has_stood = True  # Mark the player as done for this round
+
+            # Check if the round is complete (all players are done)
+            round_results = self.check_round_completion()
+            if round_results is not None:
+                return {'roundResults': round_results, 'gameState': self.get_game_state()}
+            else:
+                return self.get_game_state()
+
+        # Return the updated game state
         updated_game_state = self.get_game_state()
         print(f"Updated Game State: {updated_game_state}")
-        
+
         return updated_game_state
 
     def player_action_stand(self, player_name):

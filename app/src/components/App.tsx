@@ -169,6 +169,7 @@ const App: React.FC = () => {
           resetDisabled: false
         });
         setGameState(GameState.userTurn);
+        updateGameState(data.gameState);
         setBalance((data.players || []).find((player: { name: string; }) => player.name === "Player 1")?.balance || balance);
         fetchThorpSuggestion();
       }

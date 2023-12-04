@@ -51,11 +51,11 @@ class Game:
     def insert_seen_card_to_db(self, card):
         self.database.insert_seen_card(self.round_data.round_number, self.reshuffle_number, card)
         
-    def deal_card(self, player):
-        if self.deck.is_time_to_shuffle():  # This function checks if the next card is the stop card
-            self.reshuffle_deck()  # Call reshuffle deck here instead if you need to reshuffle
+    def deal_card(self, player, hand_index=0):
+        if self.deck.is_time_to_shuffle():
+            self.reshuffle_deck()
         card = self.deck.deal()
-        player.hands[0].add_card(card)
+        player.hands[hand_index].add_card(card)
         self.insert_seen_card_to_db(card)
         self.update_running_count(card)
         # Pass the current stop card position to the method
@@ -80,57 +80,54 @@ class Game:
                 recommended_action = self.thorp_action_strategy.recommend_move(player.hands[0], dealer_upcard)
             self.round_data.update_recommendations(recommended_bet, recommended_action)
 
+    def get_player_by_name(self, name):
+        return next((p for p in self.players if p.name == name), None)
+
     def player_action_hit(self, player_name):
-        print(f"Attempting to hit for player: {player_name}")
-        
-        player = next((p for p in self.players if p.name == player_name), None)
-        
-        if not player or player.hands[0].is_busted():
-            return {'error': 'Player not found or already busted'}
-        
-        print(f"Player {player_name} found. Dealing a card...")
-        
+        player = self.get_player_by_name(player_name)
+        if not player or player.active_hand_index >= len(player.hands):
+            return {'error': 'Invalid hand index or player not found'}
+
+        active_hand = player.hands[player.active_hand_index]
+        if active_hand.is_busted():
+            return {'error': 'Hand already busted'}
+
         card_dealt = self.deck.deal()
-        print(f"Card dealt: {card_dealt.suit}, {card_dealt.rank}")
-        
-        player.hands[0].add_card(card_dealt)# Assuming the first hand
-        self.insert_seen_card_to_db(card_dealt) 
-        print(f"Card added to {player_name}'s hand.")
-        
-        # Update RoundData
-        self.round_data.update_player_hand(player_name, player.hands[0].get_cards())
+        active_hand.add_card(card_dealt)
+        self.insert_seen_card_to_db(card_dealt)
+        self.update_running_count(card_dealt)
+
+        self.round_data.update_player_hand(player_name, active_hand.get_cards())
         self.round_data.record_player_action(player_name, 'Hit')
 
-        dealer_upcard = self.dealer.hands[0].cards[0]
-        self.calculate_and_update_recommendations(dealer_upcard)
-        
-        # Check if player busted
-        if player.hands[0].is_busted():
-            print(f"Player {player_name} busted.")
-            player.has_stood = True  # Mark the player as done for this round
+        if active_hand.is_busted() and player.has_more_hands():
+            player.next_hand()
 
-            # Check if the round is complete (all players are done)
-            round_results = self.check_round_completion()
-            if round_results is not None:
-                return {'roundResults': round_results, 'gameState': self.get_game_state()}
-            else:
-                return self.get_game_state()
+        print(f"Player {player_name} hit on hand {player.active_hand_index}")
 
-        # Return the updated game state
-        updated_game_state = self.get_game_state()
-        print(f"Updated Game State: {updated_game_state}")
-
-        return updated_game_state
+        return self.get_game_state()
 
     def player_action_stand(self, player_name):
-        player = next((p for p in self.players if p.name == player_name), None)
+        player = self.get_player_by_name(player_name)
         if not player:
             return {'error': 'Player not found'}
-        
-        self.round_data.record_player_action(player_name, 'Stand')
-        dealer_upcard = self.dealer.hands[0].cards[0]
-        self.calculate_and_update_recommendations(dealer_upcard)
+
+        active_hand = player.hands[player.active_hand_index]
+        active_hand.stand()
+
+        print(f"Player {player_name} has stood on hand {player.active_hand_index}.")
+
+        if player.has_more_hands():
+            player.next_hand()
+        else:
+            if player.all_hands_stood_or_busted():
+                print(f"All hands of {player_name} have stood or busted.")
+            return self.get_game_state()
+
         return self.get_game_state()
+
+    def are_all_players_done(self):
+        return all(player.has_stood for player in self.players)
 
     def player_action_double_down(self, player_name):
         player = next((p for p in self.players if p.name == player_name), None)
@@ -160,28 +157,33 @@ class Game:
             print(new_card.suit, new_card.rank)
             self.insert_seen_card_to_db(new_card)  # Directly insert dealer's new card to DB
             self.update_running_count(new_card)
+        return self.get_game_state()
             
     def determine_round_winner(self):
         dealer_value = self.dealer.hands[0].calculate_value()
         dealer_busted = dealer_value > 21
 
         for player in self.players:
-            player_hand_value = player.hands[0].calculate_value()
-            player_busted = player_hand_value > 21
+            for hand_index, hand in enumerate(player.hands):
+                player_hand_value = hand.calculate_value()
+                player_busted = player_hand_value > 21
 
-            if player_busted:
-                result = "lose"
-            elif dealer_busted or player_hand_value > dealer_value:
-                result = "win"
-                player.win(0)  # Update player's money if they win
-            elif player_hand_value == dealer_value:
-                result = "push"
-            else:
-                result = "lose"
+                if player_busted:
+                    result = "lose"
+                elif dealer_busted or player_hand_value > dealer_value:
+                    result = "win"
+                    player.win(0)  # Update player's money if they win
+                elif player_hand_value == dealer_value:
+                    result = "push"
+                else:
+                    result = "lose"
+                    
+                # Print the result for each hand
+                print(f"{player.name} Hand {hand_index}: {player_hand_value} vs Dealer: {dealer_value} - {result}")
 
-            self.round_data.update_round_results(
-                player.name, player_hand_value, dealer_value, result
-            )
+                self.round_data.update_round_results(
+                    player.name, player_hand_value, dealer_value, result
+                )
 
         return self.round_data.round_results
 
@@ -209,20 +211,27 @@ class Game:
         return round_results
     
     def player_action_split(self, player, hand_index):
-        # Check if the player can split the hand (must have two cards of the same rank)
         hand = player.hands[hand_index]
-        if len(hand.cards) != 2 or hand.cards[0].rank != hand.cards[1].rank:
+        if not player.hands[hand_index].can_split():
             return False  # Cannot split
 
         # Create a new hand with one of the cards from the original hand
         new_hand = Hand()
         new_hand.add_card(hand.cards.pop())
 
-        # Add the new hand to the player's hands and adjust bets
-        player.add_hand()
-        player.hands[-1] = new_hand
+        # Add the new hand to the player's hands and duplicate the bet for the new hand
+        player.hands.append(new_hand)
+        player.bets.append(player.bets[hand_index])
+        player.active_hand_index = 0
+        
+        # if not player.place_bet_for_split(hand_index):
+        #     return {'error': 'Insufficient funds to place bet for split'}
 
-        return True  # Successfully split
+        # Deal a new card to both the original hand and the new hand
+        self.deal_card(player, hand_index)
+        self.deal_card(player, len(player.hands) - 1)  # The index of the new hand
+
+        return True
     
     def get_game_state(self):
         dealer_state = {
@@ -232,20 +241,18 @@ class Game:
         }
         player_states = [
             {
-                'player_id': i,
                 'name': player.name,
                 'hands': [
                     {
-                        'hand_index': j,
                         'hand_value': hand.calculate_value(),
                         'cards': [(card.suit, card.rank) for card in hand.cards],
                     }
-                    for j, hand in enumerate(player.hands)
+                    for hand in player.hands
                 ],
                 'chips': player.money,
                 'current_bets': player.bets,
             }
-            for i, player in enumerate(self.players)
+            for player in self.players
         ]
         return {
             'dealer': dealer_state,
@@ -285,12 +292,18 @@ class Game:
         }
         
     def check_round_completion(self):
-        all_done = all(player.has_stood or player.hands[0].is_busted() for player in self.players)
+        print("Checking if all players are done...")
+
+        all_done = all(player.all_hands_stood_or_busted() for player in self.players)
+
         if all_done:
+            print("All players are done. Proceeding to dealer's turn.")
             self.dealer_action()
             round_results = self.determine_round_winner()
-            return round_results
-        return None
+            return {'roundResults': round_results, 'gameState': self.get_game_state()}
+        else:
+            print("Not all players are done. Continuing the round.")
+            return None
 
     def prepare_next_round(self):
         self.round_number += 1  # Increment round number for the new round

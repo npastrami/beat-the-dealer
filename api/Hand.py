@@ -1,6 +1,7 @@
 class Hand:
     def __init__(self):
         self.cards = []
+        self.has_stood = False
 
     def add_card(self, card):
         self.cards.append(card)
@@ -41,3 +42,6 @@ class Hand:
     
     def get_cards(self):
         return self.cards
+    
+    def stand(self):
+        self.has_stood = True

@@ -69,30 +69,29 @@ def hit():
 def stand():
     global game
     player_name = request.json.get('player_name')
-    player = next((p for p in game.players if p.name == player_name), None)
+
+    # Find the player by name
+    player = game.get_player_by_name(player_name)
     if not player:
         return jsonify({'error': 'Player not found'}), 400
 
-    # Mark the player as having stood
-    player.has_stood = True
-    print(f"{player_name} has stood.")
+    # Process the stand action
+    game.player_action_stand(player_name)
 
-    # Check if the round is complete
+    # # Check if the player has more hands to play
+    # if player.has_more_hands():
+    #     # Player has more hands to play, continue without checking round completion
+    #     return jsonify(game.get_game_state()), 200
+
+    # Check if the round is complete (all players have stood on all hands)
     round_results = game.check_round_completion()
 
     # If the round is complete, print and return the results
     if round_results is not None:
-        for result in round_results:
-            print(f"{result['player_name']} {result['result']} against the dealer with hand value {result['player_hand_value']} to dealer's {result['dealer_hand_value']}.")
-        print("Round complete, returning results.")
-        return jsonify({'roundResults': round_results, 'gameState': game.get_game_state()})  # Include gameState
+        return jsonify({'roundResults': round_results, 'gameState': game.get_game_state()})
 
     # If the round is not complete, just return the current game state
-    print("Round not complete, continuing game.")
-    current_game_state = game.get_game_state()
-    if 'players' not in current_game_state:
-        current_game_state['players'] = []  # Ensure players key exists
-    return jsonify(current_game_state)
+    return jsonify(game.get_game_state()), 200
 
 @app.route('/double', methods=['POST'])
 def double_down():
@@ -196,5 +195,3 @@ def reshuffle_deck():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
-    # to fix jira ticket

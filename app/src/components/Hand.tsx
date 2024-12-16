@@ -4,10 +4,11 @@ import Card from './Card';
 
 type HandProps = {
   title: string,
-  cards: any[]
+  cards: any[];
+  style?: React.CSSProperties;
 };
 
-const Hand: React.FC<HandProps> = ({ title, cards }) => {
+const Hand: React.FC<HandProps> = ({ title, cards, style }) => {
   const getTitle = () => {
     if (cards.length > 0) {
       return (
@@ -16,7 +17,7 @@ const Hand: React.FC<HandProps> = ({ title, cards }) => {
     }
   }
   return (
-    <div className={styles.handContainer}>
+    <div className={styles.handContainer} style={style}>
       {getTitle()}
       <div className={styles.cardContainer}>
         {cards.map((card: any, index: number) => {
